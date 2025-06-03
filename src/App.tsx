@@ -101,7 +101,7 @@ function App() {
   }
 
   useEffect(() => {
-    fetch('https://seu-backend.onrender.com/lancamentos')
+    fetch('http://localhost:3001/lancamentos')
       .then(res => res.json())
       .then(data => setLancamentos(data));
   }, []);
@@ -109,7 +109,7 @@ function App() {
   function adicionarLancamento(e: React.FormEvent) {
     e.preventDefault();
     if (!descricao || !valor || !data) return;
-    fetch('https://seu-backend.onrender.com/lancamentos', {
+    fetch('http://localhost:3001/lancamentos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tipo, descricao, valor: parseFloat(valor.replace(',', '.')), data })
@@ -122,7 +122,7 @@ function App() {
   }
 
   function removerLancamento(id: number) {
-    fetch(`https://seu-backend.onrender.com/lancamentos/${id}`, { method: 'DELETE' })
+    fetch(`http://localhost:3001/lancamentos/${id}`, { method: 'DELETE' })
       .then(() => setLancamentos(lancamentos.filter(l => l.id !== id)));
   }
 
@@ -141,7 +141,7 @@ function App() {
 
   function onDrop(tipo: 'receita' | 'despesa') {
     if (draggedId !== null) {
-      fetch(`https://seu-backend.onrender.com/lancamentos/${draggedId}/tipo`, {
+      fetch(`http://localhost:3001/lancamentos/${draggedId}/tipo`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tipo })
