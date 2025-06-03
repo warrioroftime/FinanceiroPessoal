@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Sistema Financeiro Pessoal
 
 Este projeto é um site para controle financeiro pessoal, desenvolvido com React, Vite e TypeScript.
@@ -69,3 +70,6 @@ export default tseslint.config({
   },
 })
 ```
+=======
+# FinanceiroPessoal
+>>>>>>> 6951b66e1d1d90dfe0ca1e1c8a09519859138284
