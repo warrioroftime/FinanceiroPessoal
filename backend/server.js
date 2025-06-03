@@ -19,7 +19,23 @@ db.serialize(() => {
     tipo TEXT NOT NULL,
     descricao TEXT NOT NULL,
     valor REAL NOT NULL,
-    data TEXT NOT NULL
+    data TEXT NOT NULL,
+    categoria_id INTEGER,
+    recorrente INTEGER DEFAULT 0,
+    FOREIGN KEY (categoria_id) REFERENCES categorias(id)
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS categorias (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL UNIQUE,
+    cor TEXT DEFAULT '#1976d2'
+  )`);
+  db.run(`CREATE TABLE IF NOT EXISTS metas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ano_mes TEXT NOT NULL,
+    tipo TEXT NOT NULL,
+    valor REAL NOT NULL,
+    categoria_id INTEGER,
+    FOREIGN KEY (categoria_id) REFERENCES categorias(id)
   )`);
 });
 
@@ -31,15 +47,15 @@ app.get('/lancamentos', (req, res) => {
   });
 });
 
-// Adicionar lançamento
+// Adicionar lançamento (com recorrência)
 app.post('/lancamentos', (req, res) => {
-  const { tipo, descricao, valor, data } = req.body;
+  const { tipo, descricao, valor, data, categoria_id, recorrente } = req.body;
   db.run(
-    'INSERT INTO lancamentos (tipo, descricao, valor, data) VALUES (?, ?, ?, ?)',
-    [tipo, descricao, valor, data],
+    'INSERT INTO lancamentos (tipo, descricao, valor, data, categoria_id, recorrente) VALUES (?, ?, ?, ?, ?, ?)',
+    [tipo, descricao, valor, data, categoria_id, recorrente ? 1 : 0],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID, tipo, descricao, valor, data });
+      res.json({ id: this.lastID, tipo, descricao, valor, data, categoria_id, recorrente: recorrente ? 1 : 0 });
     }
   );
 });
@@ -77,6 +93,68 @@ app.post('/importar-lancamentos', (req, res) => {
   stmt.finalize(err => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ mensagem: `Importação concluída. ${inseridos} lançamentos inseridos.` });
+  });
+});
+
+// CRUD de categorias
+app.get('/categorias', (req, res) => {
+  db.all('SELECT * FROM categorias', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/categorias', (req, res) => {
+  const { nome, cor } = req.body;
+  db.run('INSERT INTO categorias (nome, cor) VALUES (?, ?)', [nome, cor || '#1976d2'], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ id: this.lastID, nome, cor: cor || '#1976d2' });
+  });
+});
+
+app.put('/categorias/:id', (req, res) => {
+  const { nome, cor } = req.body;
+  db.run('UPDATE categorias SET nome = ?, cor = ? WHERE id = ?', [nome, cor, req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+app.delete('/categorias/:id', (req, res) => {
+  db.run('DELETE FROM categorias WHERE id = ?', [req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+// CRUD de metas financeiras
+app.get('/metas', (req, res) => {
+  db.all('SELECT * FROM metas', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+app.post('/metas', (req, res) => {
+  const { ano_mes, tipo, valor, categoria_id } = req.body;
+  db.run('INSERT INTO metas (ano_mes, tipo, valor, categoria_id) VALUES (?, ?, ?, ?)', [ano_mes, tipo, valor, categoria_id || null], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ id: this.lastID, ano_mes, tipo, valor, categoria_id });
+  });
+});
+
+app.put('/metas/:id', (req, res) => {
+  const { ano_mes, tipo, valor, categoria_id } = req.body;
+  db.run('UPDATE metas SET ano_mes = ?, tipo = ?, valor = ?, categoria_id = ? WHERE id = ?', [ano_mes, tipo, valor, categoria_id, req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+app.delete('/metas/:id', (req, res) => {
+  db.run('DELETE FROM metas WHERE id = ?', [req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
   });
 });
 
