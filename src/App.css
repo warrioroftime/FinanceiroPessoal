@@ -1,0 +1,423 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+body, html, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(120deg, #23272f 0%, #1a1d23 100%);
+  color: #f3f3f3;
+}
+
+.container {
+  max-width: 700px;
+  min-width: 350px;
+  width: 90vw;
+  margin: 40px auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px #0001;
+  padding: 2rem;
+  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  min-width: 100vw;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+  background: none;
+}
+@media (max-width: 600px) {
+  .container {
+    padding: 1rem 0.2rem;
+    min-width: 100vw;
+  }
+}
+.saldo {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: #fff;
+}
+.formulario {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+.formulario input, .formulario select {
+  padding: 0.9rem 1.1rem;
+  font-size: 1.1rem;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #23272f;
+  color: #f3f3f3;
+  margin-bottom: 0.2rem;
+}
+.formulario input::placeholder {
+  color: #aaa;
+}
+.formulario button {
+  font-size: 1.1rem;
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  padding: 0.9rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.formulario button:hover {
+  background: #388e3c;
+}
+.lancamentos {
+  list-style: none;
+  padding: 0;
+  margin-top: 1rem;
+  font-size: 1.15rem;
+}
+.lancamentos li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #333;
+  margin-bottom: 0.7rem;
+  box-shadow: 0 1px 4px #0001;
+  background: linear-gradient(90deg, #23272f 80%, #23272f 100%);
+  transition: box-shadow 0.2s, border 0.2s;
+}
+.lancamentos li.receita {
+  border-left: 5px solid #4caf50;
+  background: linear-gradient(90deg, #263c2b 80%, #23272f 100%);
+}
+.lancamentos li.despesa {
+  border-left: 5px solid #d32f2f;
+  background: linear-gradient(90deg, #3c2626 80%, #23272f 100%);
+}
+.lancamento-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.lancamento-data {
+  font-size: 1.05rem;
+  color: #bbb;
+  margin-top: 2px;
+}
+.lancamento-descricao {
+  font-weight: 500;
+  font-size: 1.18rem;
+  color: #f3f3f3;
+}
+.lancamento-valor {
+  font-size: 1.22rem;
+  font-weight: bold;
+  color: #fff;
+}
+.lancamentos li.receita .lancamento-valor {
+  color: #7fff7f;
+}
+.lancamentos li.despesa .lancamento-valor {
+  color: #ff7f7f;
+}
+.lancamentos li .remover {
+  background: #d32f2f;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.2rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+  transition: background 0.2s;
+}
+.lancamentos li .remover:hover {
+  background: #b71c1c;
+}
+.lancamentos li .alternar {
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.2rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-left: 0.5rem;
+  transition: background 0.2s;
+}
+.lancamentos li .alternar:hover {
+  background: #0d47a1;
+}
+.formulario input[type="date"] {
+  min-width: 160px;
+}
+.formulario input[type="text"],
+.formulario input[type="number"] {
+  min-width: 200px;
+}
+.formulario select {
+  min-width: 120px;
+}
+.lancamentos-separadas {
+  display: flex;
+  flex-direction: row;
+  gap: 2.5rem;
+  justify-content: center;
+  align-items: flex-start;
+  margin-top: 1.5rem;
+  flex-wrap: nowrap;
+}
+.lancamentos-col {
+  flex: 1 1 320px;
+  min-width: 300px;
+  max-width: 400px;
+  background: #23272f;
+  border-radius: 10px;
+  padding: 1.2rem 1rem 1.5rem 1rem;
+  box-shadow: 0 2px 12px #0002;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 300px;
+}
+.lancamentos li[draggable="true"] {
+  cursor: grab;
+  opacity: 1;
+  transition: box-shadow 0.2s, border 0.2s, opacity 0.2s;
+}
+.lancamentos-col.drag-over {
+  box-shadow: 0 0 0 3px #1976d2;
+  border: 2px dashed #1976d2;
+}
+@media (max-width: 900px) {
+  .lancamentos-separadas {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+  .lancamentos-col {
+    max-width: 98vw;
+    min-width: 0;
+    width: 100%;
+  }
+}
+@media (max-width: 700px) {
+  .lancamentos-separadas {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+}
+.filtro-mes {
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.filtro-mes label {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #fff;
+}
+.filtro-mes input[type="month"] {
+  font-size: 1.25rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: #23272f;
+  color: #f3f3f3;
+  margin-left: 0.5rem;
+  min-width: 180px;
+}
+.abas {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  justify-content: center;
+}
+.abas button {
+  background: #23272f;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 6px 6px 0 0;
+  padding: 0.7rem 2.2rem;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.abas .aba-ativa {
+  background: #4caf50;
+  color: #fff;
+  border-bottom: 2px solid #4caf50;
+}
+.aba-graficos {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+.grafico-pizza {
+  background: #23272f;
+  border-radius: 12px;
+  padding: 2rem 2.5rem;
+  box-shadow: 0 2px 12px #0002;
+  min-width: 320px;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+.grafico-barra {
+  background: #23272f;
+  border-radius: 12px;
+  padding: 2rem 2.5rem;
+  box-shadow: 0 2px 12px #0002;
+  min-width: 320px;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 700px;
+}
+
+/* Centralização total do login */
+.login-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Papel de parede financeiro */
+  background: linear-gradient(120deg, #23272f 0%, #1a1d23 100%);
+  z-index: 10;
+}
+.login-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80') center center/cover no-repeat;
+  opacity: 0.32;
+  z-index: -1;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  background: rgba(30, 32, 40, 0.92);
+  padding: 2.5rem 2.2rem 2.2rem 2.2rem;
+  border-radius: 14px;
+  box-shadow: 0 4px 32px #0005;
+  min-width: 320px;
+  max-width: 90vw;
+  align-items: center;
+}
+
+.login-form-descricao {
+  color: #fff;
+  font-size: 1.18rem;
+  font-weight: 500;
+  margin-bottom: 0.7rem;
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+
+.login-form input[type="text"],
+.login-form input[type="password"] {
+  width: 100%;
+  padding: 1rem 1.2rem;
+  font-size: 1.1rem;
+  border-radius: 7px;
+  border: 1px solid #444;
+  background: #23272f;
+  color: #f3f3f3;
+  margin-bottom: 0.2rem;
+  outline: none;
+}
+
+.login-form input[type="text"]::placeholder,
+.login-form input[type="password"]::placeholder {
+  color: #aaa;
+}
+
+.login-form button {
+  width: 100%;
+  font-size: 1.1rem;
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  padding: 1rem 0;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 0.5rem;
+}
+.login-form button:hover {
+  background: #388e3c;
+}
+
+@media (max-width: 500px) {
+  .login-form {
+    min-width: 90vw;
+    padding: 1.2rem 0.5rem;
+  }
+}
