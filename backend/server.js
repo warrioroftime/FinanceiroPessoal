@@ -61,6 +61,25 @@ app.patch('/lancamentos/:id/tipo', (req, res) => {
   });
 });
 
+// Importar lançamentos em massa (para migração)
+app.post('/importar-lancamentos', (req, res) => {
+  const lancamentos = req.body;
+  if (!Array.isArray(lancamentos)) {
+    return res.status(400).json({ error: 'Formato inválido, esperado array de lançamentos.' });
+  }
+  const stmt = db.prepare('INSERT INTO lancamentos (tipo, descricao, valor, data) VALUES (?, ?, ?, ?)');
+  let inseridos = 0;
+  lancamentos.forEach(l => {
+    stmt.run([l.tipo, l.descricao, l.valor, l.data], err => {
+      if (!err) inseridos++;
+    });
+  });
+  stmt.finalize(err => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ mensagem: `Importação concluída. ${inseridos} lançamentos inseridos.` });
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`API backend rodando em http://localhost:${PORT}`);
 });
