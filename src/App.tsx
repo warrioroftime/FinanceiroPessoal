@@ -59,7 +59,7 @@ function App() {
     const hoje = new Date();
     return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [aba, setAba] = useState<'lancamentos' | 'graficos'>('lancamentos');
+  const [aba, setAba] = useState<'lancamentos' | 'graficos' | 'metas' | 'categorias'>('lancamentos');
   const [logado, setLogado] = useState(false);
   const [usuario, setUsuario] = useState('');
   const [senha, setSenha] = useState('');
@@ -537,6 +537,8 @@ function App() {
       <h1 style={{ marginBottom: 18 }}>Controle Financeiro Pessoal</h1>
       <div className="abas">
         <button className={aba === 'lancamentos' ? 'aba-ativa' : ''} onClick={() => setAba('lancamentos')}>Lançamentos</button>
+        <button className={aba === 'metas' ? 'aba-ativa' : ''} onClick={() => setAba('metas')}>Metas do mês</button>
+        <button className={aba === 'categorias' ? 'aba-ativa' : ''} onClick={() => setAba('categorias')}>Categorias</button>
         <button className={aba === 'graficos' ? 'aba-ativa' : ''} onClick={() => setAba('graficos')}>Gráficos</button>
       </div>
       {aba === 'lancamentos' && (
@@ -641,7 +643,6 @@ function App() {
               </div>
             </form>
             <h2 style={{ margin: '1.2rem 0 0.7rem 0', color: '#4caf50', fontSize: '1.18rem' }}>Lançamentos</h2>
-            {/* Exibir categoria nos lançamentos */}
             <div className="lancamentos-separadas">
               <div
                 className={`lancamentos-col receitas-col${dragOverTipo === 'receita' ? ' drag-over' : ''}`}
@@ -727,82 +728,86 @@ function App() {
               </div>
             </div>
           </div>
-          <div className="secao">
-            <div className="secao-titulo">Metas do mês</div>
-            <form onSubmit={editandoMeta ? editarMeta : adicionarMeta} className="formulario">
-              <input
-                type="number"
-                placeholder="Valor da meta"
-                value={metaValor}
-                onChange={e => setMetaValor(e.target.value)}
-              />
-              <select value={metaTipo} onChange={e => setMetaTipo(e.target.value as 'receita' | 'despesa')}>
-                <option value="receita">Receita</option>
-                <option value="despesa">Despesa</option>
-              </select>
-              <select value={metaCategoriaId ?? ''} onChange={e => setMetaCategoriaId(e.target.value ? Number(e.target.value) : null)}>
-                <option value="">Todas categorias</option>
-                {categorias.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.nome}</option>
-                ))}
-              </select>
-              <button type="submit">{editandoMeta ? 'Salvar' : 'Adicionar'}</button>
-              {editandoMeta && (
-                <button type="button" onClick={() => { setEditandoMeta(null); setMetaValor(''); setMetaCategoriaId(null); setMetaTipo('despesa'); }}>Cancelar</button>
-              )}
-            </form>
-            <ul style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-              {metasDoMes().map(meta => {
-                const cat = categorias.find(c => c.id === meta.categoria_id);
-                const progresso = progressoMeta(meta);
-                const ultrapassou = progresso > 100;
-                return (
-                  <li key={meta.id} style={{ background: ultrapassou ? '#d32f2f' : '#23272f', color: '#fff', borderRadius: 6, padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', border: ultrapassou ? '2px solid #ff5252' : undefined }}>
-                    <span>{meta.tipo === 'receita' ? 'Receber' : 'Gastar'} R$ {meta.valor.toFixed(2)} {cat && (<span style={{ background: cat.cor, color: '#fff', borderRadius: 4, padding: '0 6px', fontSize: 13 }}>{cat.nome}</span>)}
-                      {ultrapassou && <span style={{ color: '#ffbaba', marginLeft: 10, fontWeight: 'bold' }}>Limite ultrapassado!</span>}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 120, background: '#444', borderRadius: 4, height: 12, margin: '0 8px', position: 'relative' }}>
-                      <div style={{ width: Math.min(progresso, 100) + '%', background: meta.tipo === 'receita' ? '#4caf50' : '#d32f2f', height: '100%', borderRadius: 4, transition: 'width 0.3s' }}></div>
-                    </div>
-                    <span style={{ minWidth: 40 }}>{progresso.toFixed(0)}%</span>
-                    <button style={{ marginLeft: 4 }} onClick={() => { setEditandoMeta(meta); setMetaValor(meta.valor.toString()); setMetaTipo(meta.tipo); setMetaCategoriaId(meta.categoria_id || null); }}>✏️</button>
-                    <button style={{ marginLeft: 2 }} onClick={() => removerMeta(meta.id)}>🗑️</button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-          <div className="secao">
-            <div className="secao-titulo">Categorias</div>
-            <form onSubmit={editandoCategoria ? editarCategoria : adicionarCategoria} className="formulario">
-              <input
-                type="text"
-                placeholder="Nome da categoria"
-                value={novaCategoria}
-                onChange={e => setNovaCategoria(e.target.value)}
-              />
-              <input
-                type="color"
-                value={corCategoria}
-                onChange={e => setCorCategoria(e.target.value)}
-                title="Cor da categoria"
-              />
-              <button type="submit">{editandoCategoria ? 'Salvar' : 'Adicionar'}</button>
-              {editandoCategoria && (
-                <button type="button" onClick={() => { setEditandoCategoria(null); setNovaCategoria(''); setCorCategoria('#1976d2'); }}>Cancelar</button>
-              )}
-            </form>
-            <ul style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-              {categorias.map(cat => (
-                <li key={cat.id} style={{ background: cat.cor, color: '#fff', borderRadius: 6, padding: '0.3rem 0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {cat.nome}
-                  <button style={{ marginLeft: 4 }} onClick={() => { setEditandoCategoria(cat); setNovaCategoria(cat.nome); setCorCategoria(cat.cor); }}>✏️</button>
-                  <button style={{ marginLeft: 2 }} onClick={() => removerCategoria(cat.id)}>🗑️</button>
-                </li>
-              ))}
-            </ul>
-          </div>
         </>
+      )}
+      {aba === 'metas' && (
+        <div className="secao">
+          <div className="secao-titulo">Metas do mês</div>
+          <form onSubmit={editandoMeta ? editarMeta : adicionarMeta} className="formulario">
+            <input
+              type="number"
+              placeholder="Valor da meta"
+              value={metaValor}
+              onChange={e => setMetaValor(e.target.value)}
+            />
+            <select value={metaTipo} onChange={e => setMetaTipo(e.target.value as 'receita' | 'despesa')}>
+              <option value="receita">Receita</option>
+              <option value="despesa">Despesa</option>
+            </select>
+            <select value={metaCategoriaId ?? ''} onChange={e => setMetaCategoriaId(e.target.value ? Number(e.target.value) : null)}>
+              <option value="">Todas categorias</option>
+              {categorias.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.nome}</option>
+              ))}
+            </select>
+            <button type="submit">{editandoMeta ? 'Salvar' : 'Adicionar'}</button>
+            {editandoMeta && (
+              <button type="button" onClick={() => { setEditandoMeta(null); setMetaValor(''); setMetaCategoriaId(null); setMetaTipo('despesa'); }}>Cancelar</button>
+            )}
+          </form>
+          <ul style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            {metasDoMes().map(meta => {
+              const cat = categorias.find(c => c.id === meta.categoria_id);
+              const progresso = progressoMeta(meta);
+              const ultrapassou = progresso > 100;
+              return (
+                <li key={meta.id} style={{ background: ultrapassou ? '#d32f2f' : '#23272f', color: '#fff', borderRadius: 6, padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', border: ultrapassou ? '2px solid #ff5252' : undefined }}>
+                  <span>{meta.tipo === 'receita' ? 'Receber' : 'Gastar'} R$ {meta.valor.toFixed(2)} {cat && (<span style={{ background: cat.cor, color: '#fff', borderRadius: 4, padding: '0 6px', fontSize: 13 }}>{cat.nome}</span>)}
+                    {ultrapassou && <span style={{ color: '#ffbaba', marginLeft: 10, fontWeight: 'bold' }}>Limite ultrapassado!</span>}
+                  </span>
+                  <div style={{ flex: 1, minWidth: 120, background: '#444', borderRadius: 4, height: 12, margin: '0 8px', position: 'relative' }}>
+                    <div style={{ width: Math.min(progresso, 100) + '%', background: meta.tipo === 'receita' ? '#4caf50' : '#d32f2f', height: '100%', borderRadius: 4, transition: 'width 0.3s' }}></div>
+                  </div>
+                  <span style={{ minWidth: 40 }}>{progresso.toFixed(0)}%</span>
+                  <button style={{ marginLeft: 4 }} onClick={() => { setEditandoMeta(meta); setMetaValor(meta.valor.toString()); setMetaTipo(meta.tipo); setMetaCategoriaId(meta.categoria_id || null); }}>✏️</button>
+                  <button style={{ marginLeft: 2 }} onClick={() => removerMeta(meta.id)}>🗑️</button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+      {aba === 'categorias' && (
+        <div className="secao">
+          <div className="secao-titulo">Categorias</div>
+          <form onSubmit={editandoCategoria ? editarCategoria : adicionarCategoria} className="formulario">
+            <input
+              type="text"
+              placeholder="Nome da categoria"
+              value={novaCategoria}
+              onChange={e => setNovaCategoria(e.target.value)}
+            />
+            <input
+              type="color"
+              value={corCategoria}
+              onChange={e => setCorCategoria(e.target.value)}
+              title="Cor da categoria"
+            />
+            <button type="submit">{editandoCategoria ? 'Salvar' : 'Adicionar'}</button>
+            {editandoCategoria && (
+              <button type="button" onClick={() => { setEditandoCategoria(null); setNovaCategoria(''); setCorCategoria('#1976d2'); }}>Cancelar</button>
+            )}
+          </form>
+          <ul style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+            {categorias.map(cat => (
+              <li key={cat.id} style={{ background: cat.cor, color: '#fff', borderRadius: 6, padding: '0.3rem 0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {cat.nome}
+                <button style={{ marginLeft: 4 }} onClick={() => { setEditandoCategoria(cat); setNovaCategoria(cat.nome); setCorCategoria(cat.cor); }}>✏️</button>
+                <button style={{ marginLeft: 2 }} onClick={() => removerCategoria(cat.id)}>🗑️</button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {aba === 'graficos' && (
         <div className="aba-graficos">
