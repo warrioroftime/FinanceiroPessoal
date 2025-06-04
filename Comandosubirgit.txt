@@ -1,0 +1,5 @@
+git add src/App.css
+
+git commit -m "Melhorias de responsividade no site para mobile"
+
+git push
