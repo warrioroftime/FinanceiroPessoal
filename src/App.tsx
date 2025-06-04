@@ -10,6 +10,7 @@ import {
   LinearScale,
   BarElement
 } from 'chart.js'
+import jsPDF from 'jspdf';
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement)
 
 interface Lancamento {
@@ -596,6 +597,48 @@ function App() {
                 />
               </label>
             </div>
+            <button style={{marginBottom: 18, background: '#1976d2', color: '#fff', border: 'none', borderRadius: 6, padding: '0.7rem 1.5rem', fontWeight: 600, cursor: 'pointer'}}
+              onClick={() => {
+                const receitas = lancamentosFiltrados.filter(l => l.tipo === 'receita');
+                const despesas = lancamentosFiltrados.filter(l => l.tipo === 'despesa');
+                const totalReceitas = receitas.reduce((acc, l) => acc + l.valor, 0);
+                const totalDespesas = despesas.reduce((acc, l) => acc + l.valor, 0);
+                const saldoMes = totalReceitas - totalDespesas;
+                const doc = new jsPDF();
+                let y = 15;
+                doc.setFontSize(16);
+                doc.text(`RELATÓRIO FINANCEIRO - ${mesSelecionado}`, 10, y);
+                y += 10;
+                doc.setFontSize(12);
+                doc.text(`Receitas: R$ ${totalReceitas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 10, y);
+                y += 8;
+                doc.text(`Despesas: R$ ${totalDespesas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 10, y);
+                y += 8;
+                doc.text(`Saldo: R$ ${saldoMes.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 10, y);
+                y += 12;
+                doc.setFontSize(13);
+                doc.text('--- RECEITAS ---', 10, y);
+                y += 8;
+                doc.setFontSize(11);
+                receitas.forEach(l => {
+                  if (y > 280) { doc.addPage(); y = 15; }
+                  doc.text(`• ${l.descricao} | R$ ${l.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})} | ${l.data}`, 10, y);
+                  y += 7;
+                });
+                y += 5;
+                doc.setFontSize(13);
+                doc.text('--- DESPESAS ---', 10, y);
+                y += 8;
+                doc.setFontSize(11);
+                despesas.forEach(l => {
+                  if (y > 280) { doc.addPage(); y = 15; }
+                  doc.text(`• ${l.descricao} | R$ ${l.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})} | ${l.data}`, 10, y);
+                  y += 7;
+                });
+                doc.save(`relatorio-financeiro-${mesSelecionado}.pdf`);
+              }}>
+              Gerar Relatório do Mês (PDF)
+            </button>
             <div className="saldo" style={{ color: saldo < 0 ? '#ff5252' : '#fff', fontWeight: saldo < 0 ? 'bold' : undefined, marginBottom: 18 }}>
               <strong>Saldo do mês:</strong> R$ {saldo.toFixed(2)}
               {saldo < 0 && <span style={{ color: '#ff5252', marginLeft: 10, fontWeight: 'bold' }}>Atenção: saldo negativo!</span>}
