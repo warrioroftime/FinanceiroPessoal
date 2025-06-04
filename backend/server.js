@@ -82,39 +82,56 @@ app.patch('/lancamentos/:id/tipo', (req, res) => {
   });
 });
 
-// Exportar lançamentos em JSON
+// Exportar lançamentos, metas e categorias em JSON
 app.get('/exportar', (req, res) => {
-  db.all('SELECT * FROM lancamentos', [], (err, rows) => {
+  db.all('SELECT * FROM lancamentos', [], (err, lancamentos) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.setHeader('Content-Disposition', 'attachment; filename="lancamentos_exportados.json"');
-    res.setHeader('Content-Type', 'application/json');
-    res.send(JSON.stringify(rows, null, 2));
+    db.all('SELECT * FROM metas', [], (err2, metas) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      db.all('SELECT * FROM categorias', [], (err3, categorias) => {
+        if (err3) return res.status(500).json({ error: err3.message });
+        res.setHeader('Content-Disposition', 'attachment; filename="financeiro_exportado.json"');
+        res.setHeader('Content-Type', 'application/json');
+        res.send(JSON.stringify({ lancamentos, metas, categorias }, null, 2));
+      });
+    });
   });
 });
 
-// Importar lançamentos (com todos os campos)
+// Importar lançamentos, metas e categorias (espera objeto com arrays)
 app.post('/importar', (req, res) => {
-  const lancamentos = req.body;
-  if (!Array.isArray(lancamentos)) {
-    return res.status(400).json({ error: 'Formato inválido, esperado array de lançamentos.' });
+  const { lancamentos, metas, categorias } = req.body;
+  if (!lancamentos || !Array.isArray(lancamentos) || !metas || !Array.isArray(metas) || !categorias || !Array.isArray(categorias)) {
+    return res.status(400).json({ error: 'Formato inválido. Esperado objeto com arrays: { lancamentos, metas, categorias }' });
   }
-  const stmt = db.prepare('INSERT INTO lancamentos (tipo, descricao, valor, data, categoria_id, recorrente) VALUES (?, ?, ?, ?, ?, ?)');
-  let inseridos = 0;
+  // Importar categorias
+  const catStmt = db.prepare('INSERT OR IGNORE INTO categorias (id, nome, cor) VALUES (?, ?, ?)');
+  categorias.forEach(c => {
+    catStmt.run([c.id, c.nome, c.cor || '#1976d2']);
+  });
+  catStmt.finalize();
+  // Importar metas
+  const metaStmt = db.prepare('INSERT INTO metas (id, ano_mes, tipo, valor, categoria_id) VALUES (?, ?, ?, ?, ?)');
+  metas.forEach(m => {
+    metaStmt.run([m.id, m.ano_mes, m.tipo, m.valor, m.categoria_id || null]);
+  });
+  metaStmt.finalize();
+  // Importar lançamentos
+  const lancStmt = db.prepare('INSERT INTO lancamentos (id, tipo, descricao, valor, data, categoria_id, recorrente) VALUES (?, ?, ?, ?, ?, ?, ?)');
   lancamentos.forEach(l => {
-    stmt.run([
+    lancStmt.run([
+      l.id,
       l.tipo,
       l.descricao,
       l.valor,
       l.data,
       l.categoria_id || null,
       l.recorrente ? 1 : 0
-    ], err => {
-      if (!err) inseridos++;
-    });
+    ]);
   });
-  stmt.finalize(err => {
+  lancStmt.finalize(err => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json({ mensagem: `Importação concluída. ${inseridos} lançamentos inseridos.` });
+    res.json({ mensagem: 'Importação concluída.' });
   });
 });
 

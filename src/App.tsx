@@ -314,27 +314,27 @@ function App() {
       .catch(() => setErroLogin('Erro de conexão com o servidor.'));
   }
 
-  // Função para exportar lançamentos (chama backend e faz download do JSON)
+  // Função para exportar lançamentos, metas e categorias (JSON)
   function exportarLancamentos() {
     fetch('http://localhost:3001/exportar')
       .then(res => {
-        if (!res.ok) throw new Error('Erro ao exportar lançamentos');
+        if (!res.ok) throw new Error('Erro ao exportar dados');
         return res.blob();
       })
       .then(blob => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'lancamentos_exportados.json';
+        a.download = 'financeiro_exportado.json';
         document.body.appendChild(a);
         a.click();
         a.remove();
         window.URL.revokeObjectURL(url);
       })
-      .catch(err => alert('Erro ao exportar lançamentos: ' + err.message));
+      .catch(err => alert('Erro ao exportar: ' + err.message));
   }
 
-  // Função para importar lançamentos (JSON)
+  // Função para importar lançamentos, metas e categorias (JSON)
   function importarLancamentos(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -342,20 +342,33 @@ function App() {
     reader.onload = function (event) {
       try {
         const data = JSON.parse(event.target?.result as string);
+        // Suporte ao formato antigo (array) e novo (objeto)
+        let body;
+        if (Array.isArray(data)) {
+          body = JSON.stringify({ lancamentos: data, metas: [], categorias: [] });
+        } else {
+          body = JSON.stringify(data);
+        }
         fetch('http://localhost:3001/importar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
+          body
         })
           .then(res => res.json())
           .then(resp => {
             if (resp.error) alert('Erro ao importar: ' + resp.error);
             else {
               alert(resp.mensagem || 'Importação realizada com sucesso!');
-              // Atualiza a lista de lançamentos após importar
+              // Atualiza tudo após importar
               fetch('http://localhost:3001/lancamentos')
                 .then(res => res.json())
                 .then(data => setLancamentos(data));
+              fetch('http://localhost:3001/categorias')
+                .then(res => res.json())
+                .then(data => setCategorias(data));
+              fetch('http://localhost:3001/metas')
+                .then(res => res.json())
+                .then(data => setMetas(data));
             }
           })
           .catch(() => alert('Erro de conexão ao importar.'));
@@ -614,40 +627,48 @@ function App() {
                   <option key={cat.id} value={cat.id}>{cat.nome}</option>
                 ))}
               </select>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <input
-                  type="checkbox"
-                  checked={recorrente}
-                  onChange={e => setRecorrente(e.target.checked)}
-                  style={{ width: 16, height: 16 }}
-                />
-                Recorrente
-              </label>
-              <button type="submit">Adicionar</button>
+              <div className="formulario-final">
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 0, whiteSpace: 'nowrap' }}>
+                  <input
+                    type="checkbox"
+                    checked={recorrente}
+                    onChange={e => setRecorrente(e.target.checked)}
+                    style={{ width: 16, height: 16 }}
+                  />
+                  <span style={{marginLeft: 2}}>Recorrente</span>
+                </label>
+                <button type="submit">Adicionar</button>
+              </div>
             </form>
             <h2 style={{ margin: '1.2rem 0 0.7rem 0', color: '#4caf50', fontSize: '1.18rem' }}>Lançamentos</h2>
             {/* Exibir categoria nos lançamentos */}
             <div className="lancamentos-separadas">
               <div
-                className={`lancamentos-col${dragOverTipo === 'receita' ? ' drag-over' : ''}`}
+                className={`lancamentos-col receitas-col${dragOverTipo === 'receita' ? ' drag-over' : ''}`}
                 onDrop={() => onDrop('receita')}
                 onDragOver={e => onDragOver(e, 'receita')}
                 onDragLeave={onDragLeave}
               >
-                <h3>Receitas</h3>
+                <h3 className="lancamentos-col-titulo receitas-titulo">
+                  <span className="lancamentos-col-icone">💰</span> Receitas
+                  <span className="lancamentos-col-total receitas-total">
+                    R$ {lancamentosFiltrados.filter(l => l.tipo === 'receita').reduce((acc, l) => acc + l.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </h3>
                 <ul className="lancamentos">
                   {lancamentosFiltrados.filter(l => l.tipo === 'receita').map(l => {
                     const cat = categorias.find(c => c.id === l.categoria_id);
                     return (
                       <li
                         key={l.id}
-                        className={l.tipo}
+                        className={l.tipo + ' lancamento-card animated-card'}
                         draggable
                         onDragStart={() => onDragStart(l.id)}
                         style={l.recorrente ? { border: '2px dashed #1976d2', background: '#232f3a' } : {}}
                         title={l.recorrente ? 'Lançamento recorrente' : ''}
                       >
                         <div className="lancamento-info">
+                          <span className="lancamento-icone" aria-label="Receita" title="Receita">💰</span>
                           <span className="lancamento-descricao">
                             {l.descricao} {l.recorrente ? <span style={{ fontSize: 14, color: '#1976d2', marginLeft: 4 }} title="Recorrente">🔁</span> : null}
                           </span>
@@ -664,25 +685,31 @@ function App() {
                 </ul>
               </div>
               <div
-                className={`lancamentos-col${dragOverTipo === 'despesa' ? ' drag-over' : ''}`}
+                className={`lancamentos-col despesas-col${dragOverTipo === 'despesa' ? ' drag-over' : ''}`}
                 onDrop={() => onDrop('despesa')}
                 onDragOver={e => onDragOver(e, 'despesa')}
                 onDragLeave={onDragLeave}
               >
-                <h3>Despesas</h3>
+                <h3 className="lancamentos-col-titulo despesas-titulo">
+                  <span className="lancamentos-col-icone">💸</span> Despesas
+                  <span className="lancamentos-col-total despesas-total">
+                    R$ {lancamentosFiltrados.filter(l => l.tipo === 'despesa').reduce((acc, l) => acc + l.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </h3>
                 <ul className="lancamentos">
                   {lancamentosFiltrados.filter(l => l.tipo === 'despesa').map(l => {
                     const cat = categorias.find(c => c.id === l.categoria_id);
                     return (
                       <li
                         key={l.id}
-                        className={l.tipo}
+                        className={l.tipo + ' lancamento-card animated-card'}
                         draggable
                         onDragStart={() => onDragStart(l.id)}
                         style={l.recorrente ? { border: '2px dashed #1976d2', background: '#2f2323' } : {}}
                         title={l.recorrente ? 'Lançamento recorrente' : ''}
                       >
                         <div className="lancamento-info">
+                          <span className="lancamento-icone" aria-label="Despesa" title="Despesa">💸</span>
                           <span className="lancamento-descricao">
                             {l.descricao} {l.recorrente ? <span style={{ fontSize: 14, color: '#1976d2', marginLeft: 4 }} title="Recorrente">🔁</span> : null}
                           </span>
