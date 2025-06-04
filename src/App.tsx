@@ -523,7 +523,7 @@ function App() {
   }
 
   return (
-    <div className="container">
+    <div className={logado ? "container dashboard-bg" : "container"}>
       <div className="top-bar">
         <button className="btn-sair" onClick={sair}>Sair</button>
       </div>

@@ -853,3 +853,27 @@ body {
     margin-left: 0;
   }
 }
+
+/* Fundo de paisagem para o dashboard principal */
+.dashboard-bg {
+  min-height: 100vh;
+  min-width: 100vw;
+  background: linear-gradient(rgba(30,34,44,0.82), rgba(30,34,44,0.88)),
+    url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80') center center/cover no-repeat;
+  box-shadow: 0 2px 24px #0003;
+  transition: background 0.5s;
+}
+
+@media (max-width: 700px) {
+  .dashboard-bg {
+    background-position: center top;
+    background-size: cover;
+  }
+}
+
+@media (max-width: 400px) {
+  .dashboard-bg {
+    background-size: cover;
+    background-position: center top;
+  }
+}
