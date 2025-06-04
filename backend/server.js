@@ -37,6 +37,11 @@ db.serialize(() => {
     categoria_id INTEGER,
     FOREIGN KEY (categoria_id) REFERENCES categorias(id)
   )`);
+  db.run(`CREATE TABLE IF NOT EXISTS usuarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario TEXT NOT NULL UNIQUE,
+    senha TEXT NOT NULL
+  )`);
 });
 
 // Listar todos os lançamentos
@@ -77,16 +82,33 @@ app.patch('/lancamentos/:id/tipo', (req, res) => {
   });
 });
 
-// Importar lançamentos em massa (para migração)
-app.post('/importar-lancamentos', (req, res) => {
+// Exportar lançamentos em JSON
+app.get('/exportar', (req, res) => {
+  db.all('SELECT * FROM lancamentos', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.setHeader('Content-Disposition', 'attachment; filename="lancamentos_exportados.json"');
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(rows, null, 2));
+  });
+});
+
+// Importar lançamentos (com todos os campos)
+app.post('/importar', (req, res) => {
   const lancamentos = req.body;
   if (!Array.isArray(lancamentos)) {
     return res.status(400).json({ error: 'Formato inválido, esperado array de lançamentos.' });
   }
-  const stmt = db.prepare('INSERT INTO lancamentos (tipo, descricao, valor, data) VALUES (?, ?, ?, ?)');
+  const stmt = db.prepare('INSERT INTO lancamentos (tipo, descricao, valor, data, categoria_id, recorrente) VALUES (?, ?, ?, ?, ?, ?)');
   let inseridos = 0;
   lancamentos.forEach(l => {
-    stmt.run([l.tipo, l.descricao, l.valor, l.data], err => {
+    stmt.run([
+      l.tipo,
+      l.descricao,
+      l.valor,
+      l.data,
+      l.categoria_id || null,
+      l.recorrente ? 1 : 0
+    ], err => {
       if (!err) inseridos++;
     });
   });
@@ -155,6 +177,33 @@ app.delete('/metas/:id', (req, res) => {
   db.run('DELETE FROM metas WHERE id = ?', [req.params.id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ success: true });
+  });
+});
+
+// Rota para registrar novo usuário
+app.post('/usuarios', (req, res) => {
+  const { usuario, senha } = req.body;
+  if (!usuario || !senha) {
+    return res.status(400).json({ error: 'Usuário e senha são obrigatórios.' });
+  }
+  db.run('INSERT INTO usuarios (usuario, senha) VALUES (?, ?)', [usuario, senha], function (err) {
+    if (err) {
+      if (err.message.includes('UNIQUE')) {
+        return res.status(409).json({ error: 'Usuário já existe.' });
+      }
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ id: this.lastID, usuario });
+  });
+});
+
+// Rota para login de usuário
+app.post('/login', (req, res) => {
+  const { usuario, senha } = req.body;
+  db.get('SELECT * FROM usuarios WHERE usuario = ? AND senha = ?', [usuario, senha], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
+    res.json({ id: row.id, usuario: row.usuario });
   });
 });
 
