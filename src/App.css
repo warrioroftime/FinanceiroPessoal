@@ -1255,3 +1255,66 @@ body {
     padding: 0.5rem 0.5rem;
   }
 }
+
+/* Calendário estilo Google Agenda */
+.rbc-calendar {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 16px #0002;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #23272f;
+}
+.rbc-toolbar {
+  background: #f5f6fa;
+  border-radius: 12px 12px 0 0;
+  padding: 0.7rem 1.2rem;
+  font-size: 1.1rem;
+  color: #23272f;
+}
+.rbc-toolbar button {
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 1.1rem;
+  margin: 0 0.2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.rbc-toolbar button:active, .rbc-toolbar button.rbc-active {
+  background: #1976d2;
+}
+.rbc-event, .rbc-day-slot .rbc-background-event {
+  background: #1976d2;
+  color: #fff;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 1rem;
+  border: none;
+  box-shadow: 0 1px 4px #0002;
+}
+.rbc-today {
+  background: #e3f7e7 !important;
+}
+.rbc-off-range-bg {
+  background: #f5f6fa;
+}
+.rbc-month-view, .rbc-agenda-view, .rbc-time-view {
+  border-radius: 0 0 12px 12px;
+}
+.rbc-header {
+  background: #f5f6fa;
+  color: #1976d2;
+  font-weight: 600;
+  font-size: 1.05rem;
+  border-bottom: 1px solid #e0e3ea;
+}
+.rbc-date-cell.rbc-now {
+  color: #4caf50;
+  font-weight: bold;
+}
+.rbc-agenda-table td, .rbc-agenda-table th {
+  font-size: 1rem;
+  padding: 0.5rem 0.7rem;
+}

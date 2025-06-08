@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import './App.css'
 import { Pie, Bar } from 'react-chartjs-2'
 import {
@@ -11,6 +11,10 @@ import {
   BarElement
 } from 'chart.js'
 import { jsPDF } from 'jspdf';
+import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale/pt-BR';
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement)
 
 interface Lancamento {
@@ -46,6 +50,17 @@ const USUARIO_PADRAO: Usuario = {
   usuario: 'admin',
   senha: '1234',
 };
+
+const locales = {
+  'pt-BR': ptBR,
+};
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 0 }),
+  getDay,
+  locales,
+});
 
 function App() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
@@ -169,6 +184,8 @@ function App() {
   // Estado para agendamentos
   const [agendamentos, setAgendamentos] = useState<{ data: string; descricao: string }[]>([]);
   const [novoAgendamento, setNovoAgendamento] = useState({ data: '', descricao: '' });
+  const [editandoAgendamento, setEditandoAgendamento] = useState<{ data: string; descricao: string } | null>(null);
+  const [novoDescEdit, setNovoDescEdit] = useState('');
 
   // Salvar agendamentos no localStorage
   useEffect(() => {
@@ -329,13 +346,19 @@ function App() {
   }
 
   // Função para exportar lançamentos, metas, categorias e agendamentos (JSON)
+  // --- EXPORTAÇÃO E IMPORTAÇÃO DE AGENDAMENTOS NO JSON ---
   function exportarLancamentos() {
     Promise.all([
       fetch('http://localhost:3001/lancamentos').then(res => res.json()),
       fetch('http://localhost:3001/metas').then(res => res.json()),
       fetch('http://localhost:3001/categorias').then(res => res.json())
     ]).then(([lancamentos, metas, categorias]) => {
-      const dados = { lancamentos, metas, categorias, agendamentos };
+      const dados = {
+        lancamentos,
+        metas,
+        categorias,
+        agendamentos: agendamentos.map(a => ({ ...a }))
+      };
       const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -348,7 +371,6 @@ function App() {
     }).catch(err => alert('Erro ao exportar: ' + err.message));
   }
 
-  // Função para importar lançamentos, metas, categorias e agendamentos (JSON)
   function importarLancamentos(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -356,17 +378,18 @@ function App() {
     reader.onload = function (event) {
       try {
         const data = JSON.parse(event.target?.result as string);
-        // Suporte ao formato antigo (array) e novo (objeto)
         let body;
+        let ags = [];
         if (Array.isArray(data)) {
-          body = JSON.stringify({ lancamentos: data, metas: [], categorias: [] });
+          body = JSON.stringify({ lancamentos: data, metas: [], categorias: [], agendamentos: [] });
         } else {
-          body = JSON.stringify({ lancamentos: data.lancamentos || [], metas: data.metas || [], categorias: data.categorias || [] });
-          // Importar agendamentos se existirem
-          if (data.agendamentos) {
-            setAgendamentos(data.agendamentos);
-            localStorage.setItem('agendamentos', JSON.stringify(data.agendamentos));
-          }
+          body = JSON.stringify({
+            lancamentos: data.lancamentos || [],
+            metas: data.metas || [],
+            categorias: data.categorias || [],
+            agendamentos: data.agendamentos || []
+          });
+          ags = data.agendamentos || [];
         }
         fetch('http://localhost:3001/importar', {
           method: 'POST',
@@ -377,17 +400,19 @@ function App() {
           .then(resp => {
             if (resp.error) alert('Erro ao importar: ' + resp.error);
             else {
-              alert(resp.mensagem || 'Importação realizada com sucesso!');
-              // Atualiza tudo após importar
-              fetch('http://localhost:3001/lancamentos')
-                .then(res => res.json())
-                .then(data => setLancamentos(data));
-              fetch('http://localhost:3001/categorias')
-                .then(res => res.json())
-                .then(data => setCategorias(data));
-              fetch('http://localhost:3001/metas')
-                .then(res => res.json())
-                .then(data => setMetas(data));
+              // Atualiza os estados locais sem recarregar a página
+              // Buscar os dados atualizados do backend
+              Promise.all([
+                fetch('http://localhost:3001/lancamentos').then(res => res.json()),
+                fetch('http://localhost:3001/metas').then(res => res.json()),
+                fetch('http://localhost:3001/categorias').then(res => res.json())
+              ]).then(([lancs, metas, cats]) => {
+                setLancamentos(lancs);
+                setMetas(metas);
+                setCategorias(cats);
+                setAgendamentos(ags); // Atualiza agendamentos do JSON importado
+                alert('Importação concluída com sucesso!');
+              });
             }
           })
           .catch(() => alert('Erro de conexão ao importar.'));
@@ -587,6 +612,15 @@ function App() {
     setUsuario('');
     setSenha('');
     setErroLogin('');
+  }
+
+  // Função para remover agendamento
+  function removerAgendamento(evento: { start: Date; title: string }) {
+    setAgendamentos(ags => ags.filter(a => {
+      const data = new Date(a.data).toISOString().slice(0, 10);
+      const eventoData = evento.start.toISOString().slice(0, 10);
+      return !(data === eventoData && a.descricao === evento.title);
+    }));
   }
 
   return (
@@ -1038,11 +1072,11 @@ function App() {
                   </label>
                 </div>
                 <h2>Receitas x Despesas</h2>
-                <div className="grafico-pizza">
+                <div className="grafico-pizza" style={{ maxWidth: 340, margin: '0 auto' }}>
                   <Pie data={dadosPizza} />
                 </div>
                 <h2>Receitas e Despesas por Mês</h2>
-                <div className="grafico-barra">
+                <div className="grafico-barra" style={{ maxWidth: 420, margin: '0 auto' }}>
                   <Bar data={dadosBarra} options={{
                     responsive: true,
                     plugins: { legend: { position: 'top' } },
@@ -1054,7 +1088,7 @@ function App() {
                 </div>
                 {/* Gráfico de pizza por categoria (despesas) */}
                 <h2>Despesas por Categoria</h2>
-                <div className="grafico-pizza">
+                <div className="grafico-pizza" style={{ maxWidth: 340, margin: '0 auto' }}>
                   <Pie data={{
                     labels: categorias.map(c => c.nome),
                     datasets: [
@@ -1114,18 +1148,67 @@ function App() {
                   />
                   <button type="submit">Adicionar</button>
                 </form>
-                <ul style={{ width: '100%', padding: 0, margin: 0, listStyle: 'none' }}>
-                  {agendamentos.filter(a => a.data.startsWith(mesSelecionado)).length === 0 && (
-                    <li style={{ color: '#aaa', fontStyle: 'italic', padding: '0.7rem' }}>Nenhum agendamento para este mês.</li>
-                  )}
-                  {agendamentos.filter(a => a.data.startsWith(mesSelecionado)).sort((a, b) => a.data.localeCompare(b.data)).map((a, i) => (
-                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#23272f', color: '#fff', borderRadius: 8, marginBottom: 6, padding: '0.6rem 1rem' }}>
-                      <span style={{ minWidth: 90, fontWeight: 500 }}>{a.data.split('-').reverse().join('/')}</span>
-                      <span style={{ flex: 1 }}>{a.descricao}</span>
-                      <button style={{ background: '#d32f2f', color: '#fff', border: 'none', borderRadius: 5, padding: '0.2rem 0.7rem', cursor: 'pointer' }} onClick={() => setAgendamentos(ags => ags.filter((_, idx) => idx !== agendamentos.findIndex(ag => ag.data === a.data && ag.descricao === a.descricao)))}>Remover</button>
-                    </li>
-                  ))}
-                </ul>
+                {editandoAgendamento && (
+                  <form className="formulario" style={{ marginBottom: 12, background: '#f5f6fa', borderRadius: 8, padding: 8 }} onSubmit={e => {
+                    e.preventDefault();
+                    setAgendamentos(ags => ags.map(a =>
+                      a.data === editandoAgendamento.data && a.descricao === editandoAgendamento.descricao
+                        ? { ...a, descricao: novoDescEdit }
+                        : a
+                    ));
+                    setEditandoAgendamento(null);
+                    setNovoDescEdit('');
+                  }}>
+                    <input
+                      type="text"
+                      value={novoDescEdit}
+                      onChange={e => setNovoDescEdit(e.target.value)}
+                      maxLength={60}
+                      required
+                    />
+                    <button type="submit">Salvar</button>
+                    <button type="button" onClick={() => setEditandoAgendamento(null)}>Cancelar</button>
+                  </form>
+                )}
+                <div style={{ height: 500, background: '#fff', borderRadius: 12, padding: 12, marginTop: 18 }}>
+                  <Calendar
+                    localizer={localizer}
+                    events={agendamentos.map(a => ({
+                      title: a.descricao,
+                      start: new Date(a.data),
+                      end: new Date(a.data),
+                      allDay: true,
+                    }))}
+                    startAccessor="start"
+                    endAccessor="end"
+                    style={{ height: 470 }}
+                    messages={{
+                      next: 'Próximo',
+                      previous: 'Anterior',
+                      today: 'Hoje',
+                      month: 'Mês',
+                      week: 'Semana',
+                      day: 'Dia',
+                      agenda: 'Agenda',
+                      date: 'Data',
+                      time: 'Hora',
+                      event: 'Evento',
+                      noEventsInRange: 'Nenhum compromisso',
+                    }}
+                    views={['month', 'week', 'day', 'agenda']}
+                    culture="pt-BR"
+                    onSelectEvent={(evento: { start: Date; title: string }) => {
+                      if (window.confirm('Deseja editar ou remover este agendamento?\nClique em OK para editar, Cancelar para remover.')) {
+                        setEditandoAgendamento({ data: evento.start.toISOString().slice(0, 10), descricao: evento.title });
+                        setNovoDescEdit(evento.title);
+                      } else {
+                        if (window.confirm('Tem certeza que deseja remover este agendamento?')) {
+                          removerAgendamento(evento);
+                        }
+                      }
+                    }}
+                  />
+                </div>
               </div>
             )}
           </div>
