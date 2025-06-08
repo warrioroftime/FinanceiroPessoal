@@ -62,6 +62,14 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
+// Interface para eventos do calendário
+interface EventoAgenda {
+  title: string;
+  start: Date;
+  end: Date;
+  allDay?: boolean;
+}
+
 function App() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [descricao, setDescricao] = useState('');
@@ -195,6 +203,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('agendamentos', JSON.stringify(agendamentos));
   }, [agendamentos]);
+
+  // Estado para controlar a visualização e data central do calendário
+  const [viewAgenda, setViewAgenda] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
+  const [dateAgenda, setDateAgenda] = useState<Date>(new Date());
 
   function adicionarLancamento(e: React.FormEvent) {
     e.preventDefault();
@@ -1173,7 +1185,7 @@ function App() {
                 <div style={{ height: 500, background: '#fff', borderRadius: 12, padding: 12, marginTop: 18 }}>
                   <Calendar
                     localizer={localizer}
-                    events={agendamentos.map(a => ({
+                    events={agendamentos.map<EventoAgenda>(a => ({
                       title: a.descricao,
                       start: new Date(a.data),
                       end: new Date(a.data),
@@ -1197,7 +1209,11 @@ function App() {
                     }}
                     views={['month', 'week', 'day', 'agenda']}
                     culture="pt-BR"
-                    onSelectEvent={(evento: { start: Date; title: string }) => {
+                    view={viewAgenda}
+                    onView={v => setViewAgenda(v as typeof viewAgenda)}
+                    date={dateAgenda}
+                    onNavigate={d => setDateAgenda(d)}
+                    onSelectEvent={(evento: EventoAgenda) => {
                       if (window.confirm('Deseja editar ou remover este agendamento?\nClique em OK para editar, Cancelar para remover.')) {
                         setEditandoAgendamento({ data: evento.start.toISOString().slice(0, 10), descricao: evento.title });
                         setNovoDescEdit(evento.title);
