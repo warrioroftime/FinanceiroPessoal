@@ -10,7 +10,7 @@ import {
   LinearScale,
   BarElement
 } from 'chart.js'
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement)
 
 interface Lancamento {
@@ -701,7 +701,7 @@ function App() {
               </label>
             </div>
             <button style={{marginBottom: 18, background: '#1976d2', color: '#fff', border: 'none', borderRadius: 6, padding: '0.7rem 1.5rem', fontWeight: 600, cursor: 'pointer'}}
-              onClick={() => {
+              onClick={async () => {
                 const receitas = lancamentosFiltrados.filter(l => l.tipo === 'receita');
                 const despesas = lancamentosFiltrados.filter(l => l.tipo === 'despesa');
                 const totalReceitas = receitas.reduce((acc, l) => acc + l.valor, 0);
@@ -719,12 +719,84 @@ function App() {
                 y += 8;
                 doc.text(`Saldo: R$ ${saldoMes.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 10, y);
                 y += 12;
+                // --- GRAFICO PIZZA (OFFSCREEN) ---
+                let pizzaImgData = null;
+                try {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = 400; canvas.height = 250;
+                  const Chart = (await import('chart.js/auto')).default;
+                  const chart = new Chart(canvas, {
+                    type: 'pie',
+                    data: dadosPizza,
+                    options: {
+                      plugins: { legend: { display: true, position: 'top' } },
+                      animation: false,
+                      responsive: false,
+                      events: []
+                    }
+                  });
+                  chart.update();
+                  await new Promise(res => setTimeout(res, 120));
+                  pizzaImgData = canvas.toDataURL('image/png');
+                  chart.destroy();
+                } catch (e) { pizzaImgData = null; }
+                if (pizzaImgData) {
+                  doc.addImage(pizzaImgData, 'PNG', 10, y, 80, 50);
+                  y += 55;
+                }
+                // --- GRAFICO BARRA (OFFSCREEN) ---
+                let barraImgData = null;
+                try {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = 500; canvas.height = 250;
+                  const Chart = (await import('chart.js/auto')).default;
+                  const chart = new Chart(canvas, {
+                    type: 'bar',
+                    data: dadosBarra,
+                    options: {
+                      plugins: { legend: { display: true, position: 'top' } },
+                      scales: {
+                        x: { title: { display: true, text: 'Mês' } },
+                        y: { title: { display: true, text: 'Valor (R$)' } }
+                      },
+                      animation: false,
+                      responsive: false,
+                      events: []
+                    }
+                  });
+                  chart.update();
+                  await new Promise(res => setTimeout(res, 120));
+                  barraImgData = canvas.toDataURL('image/png');
+                  chart.destroy();
+                } catch (e) { barraImgData = null; }
+                if (barraImgData) {
+                  doc.addImage(barraImgData, 'PNG', 10, y, 120, 50);
+                  y += 55;
+                }
+                // --- AGENDAMENTOS DO MÊS ---
+                doc.setFontSize(13);
+                doc.text('--- AGENDAMENTOS DO MÊS ---', 10, y);
+                y += 8;
+                doc.setFontSize(11);
+                const agsMes = agendamentos.filter(a => a.data.startsWith(mesSelecionado));
+                if (agsMes.length === 0) {
+                  doc.text('Nenhum agendamento para este mês.', 10, y);
+                  y += 7;
+                } else {
+                  agsMes.forEach(a => {
+                    if (y > 270) { doc.addPage(); y = 15; }
+                    doc.text(`• ${a.data.split('-').reverse().join('/')} - ${a.descricao}`, 10, y);
+                    y += 7;
+                  });
+                }
+                // --- RECEITAS E DESPESAS DETALHADAS ---
+                y += 5;
                 doc.setFontSize(13);
                 doc.text('--- RECEITAS ---', 10, y);
                 y += 8;
                 doc.setFontSize(11);
                 receitas.forEach(l => {
-                  if (y > 280) { doc.addPage(); y = 15; }
+                  if (y > 270) { doc.addPage(); y = 15; }
                   doc.text(`• ${l.descricao} | R$ ${l.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})} | ${l.data}`, 10, y);
                   y += 7;
                 });
@@ -734,11 +806,15 @@ function App() {
                 y += 8;
                 doc.setFontSize(11);
                 despesas.forEach(l => {
-                  if (y > 280) { doc.addPage(); y = 15; }
+                  if (y > 270) { doc.addPage(); y = 15; }
                   doc.text(`• ${l.descricao} | R$ ${l.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})} | ${l.data}`, 10, y);
                   y += 7;
                 });
-                doc.save(`relatorio-financeiro-${mesSelecionado}.pdf`);
+                try {
+                  doc.save(`relatorio-financeiro-${mesSelecionado}.pdf`);
+                } catch (err) {
+                  alert('Erro ao gerar relatório PDF: ' + (err instanceof Error ? err.message : err));
+                }
               }}>
               Gerar Relatório do Mês (PDF)
             </button>
