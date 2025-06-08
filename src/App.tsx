@@ -12,6 +12,8 @@ import {
 } from 'chart.js'
 import { jsPDF } from 'jspdf';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
@@ -69,6 +71,8 @@ interface EventoAgenda {
   end: Date;
   allDay?: boolean;
 }
+
+const DnDCalendar = withDragAndDrop(Calendar);
 
 function App() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
@@ -635,6 +639,19 @@ function App() {
     }));
   }
 
+  // Função para atualizar data de agendamento ao arrastar
+  function onEventDrop({ event, start }: { event: any, start: Date | string }) {
+    const novaData = typeof start === 'string' ? start.slice(0, 10) : start.toISOString().slice(0, 10);
+    setAgendamentos(ags => ags.map(a => {
+      const dataAtual = new Date(a.data).toISOString().slice(0, 10);
+      const eventoData = new Date(event.start).toISOString().slice(0, 10);
+      if (dataAtual === eventoData && a.descricao === event.title) {
+        return { ...a, data: novaData };
+      }
+      return a;
+    }));
+  }
+
   return (
     <div className={logado ? "container dashboard-bg" : "container"}>
       {logado && (
@@ -1183,16 +1200,16 @@ function App() {
                   </form>
                 )}
                 <div style={{ height: 500, background: '#fff', borderRadius: 12, padding: 12, marginTop: 18 }}>
-                  <Calendar
+                  <DnDCalendar
                     localizer={localizer}
-                    events={agendamentos.map<EventoAgenda>(a => ({
+                    events={agendamentos.map(a => ({
                       title: a.descricao,
                       start: new Date(a.data),
                       end: new Date(a.data),
                       allDay: true,
                     }))}
-                    startAccessor="start"
-                    endAccessor="end"
+                    startAccessor={event => (event as any).start}
+                    endAccessor={event => (event as any).end}
                     style={{ height: 470 }}
                     messages={{
                       next: 'Próximo',
@@ -1213,16 +1230,19 @@ function App() {
                     onView={v => setViewAgenda(v as typeof viewAgenda)}
                     date={dateAgenda}
                     onNavigate={d => setDateAgenda(d)}
-                    onSelectEvent={(evento: EventoAgenda) => {
+                    onSelectEvent={(event: any) => {
                       if (window.confirm('Deseja editar ou remover este agendamento?\nClique em OK para editar, Cancelar para remover.')) {
-                        setEditandoAgendamento({ data: evento.start.toISOString().slice(0, 10), descricao: evento.title });
-                        setNovoDescEdit(evento.title);
+                        setEditandoAgendamento({ data: new Date(event.start).toISOString().slice(0, 10), descricao: event.title });
+                        setNovoDescEdit(event.title);
                       } else {
                         if (window.confirm('Tem certeza que deseja remover este agendamento?')) {
-                          removerAgendamento(evento);
+                          removerAgendamento(event);
                         }
                       }
                     }}
+                    onEventDrop={onEventDrop}
+                    draggableAccessor={() => true}
+                    resizable={false}
                   />
                 </div>
               </div>
