@@ -877,3 +877,89 @@ body {
     background-position: center top;
   }
 }
+
+/* Avatar de dicas financeiras */
+.avatar-dica-financeira {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.7rem;
+  background: none;
+  pointer-events: none;
+}
+.avatar-img {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  box-shadow: 0 2px 12px #0005;
+  background: #fff;
+  border: 2.5px solid #4caf50;
+  object-fit: cover;
+  pointer-events: auto;
+}
+.avatar-balao {
+  background: #23272f;
+  color: #fff;
+  border-radius: 16px 16px 16px 4px;
+  box-shadow: 0 2px 12px #0003;
+  padding: 0.7rem 1.1rem 0.7rem 1.1rem;
+  font-size: 1.05rem;
+  max-width: 260px;
+  min-width: 120px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  pointer-events: auto;
+  border: 1.5px solid #4caf50;
+  animation: avatar-balao-pop 0.5s cubic-bezier(.68,-0.55,.27,1.55);
+}
+.avatar-btn {
+  background: #4caf50;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.3rem;
+  transition: background 0.2s, transform 0.2s;
+  pointer-events: auto;
+}
+.avatar-btn:hover {
+  background: #388e3c;
+  transform: scale(1.08) rotate(18deg);
+}
+@keyframes avatar-balao-pop {
+  0% { transform: scale(0.7) translateY(30px); opacity: 0; }
+  80% { transform: scale(1.08) translateY(-4px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+@media (max-width: 700px) {
+  .avatar-dica-financeira {
+    bottom: 12px;
+    left: 8px;
+    gap: 0.4rem;
+  }
+  .avatar-img {
+    width: 40px;
+    height: 40px;
+  }
+  .avatar-balao {
+    font-size: 0.98rem;
+    max-width: 180px;
+    padding: 0.5rem 0.7rem;
+  }
+  .avatar-btn {
+    width: 22px;
+    height: 22px;
+    font-size: 1rem;
+  }
+}

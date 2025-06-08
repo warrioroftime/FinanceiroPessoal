@@ -434,6 +434,54 @@ function App() {
       .then(() => setMetas(metas.filter(m => m.id !== id)));
   }
 
+  // --- ALERTAS E NOTIFICAÇÕES ---
+  function getAlertas() {
+    const alertas: string[] = [];
+    // Alerta de saldo negativo
+    if (saldo < 0) {
+      alertas.push('Atenção: seu saldo do mês está negativo!');
+    }
+    // Alerta de meta ultrapassada
+    metasDoMes().forEach(meta => {
+      const progresso = progressoMeta(meta);
+      if (progresso > 100 && meta.tipo === 'despesa') {
+        alertas.push(`Meta de despesa ultrapassada${meta.categoria_id ? ' na categoria ' + (categorias.find(c => c.id === meta.categoria_id)?.nome || '') : ''}!`);
+      }
+    });
+    // Alerta de despesa acima da média dos últimos 3 meses
+    const meses = Object.keys(resumoPorMes).sort();
+    if (meses.length >= 4) {
+      const idx = meses.indexOf(mesSelecionado);
+      if (idx > 0) {
+        const ultimos3 = meses.slice(Math.max(0, idx - 3), idx);
+        const mediaDespesas = ultimos3.length > 0 ? ultimos3.map(m => resumoPorMes[m]?.despesa || 0).reduce((a, b) => a + b, 0) / ultimos3.length : 0;
+        const despesaAtual = resumoPorMes[mesSelecionado]?.despesa || 0;
+        if (mediaDespesas > 0 && despesaAtual > mediaDespesas * 1.2) {
+          alertas.push('Despesas do mês estão acima da média dos últimos meses!');
+        }
+      }
+    }
+    return alertas;
+  }
+
+  // --- AVATAR DE DICAS FINANCEIRAS ---
+  const dicasFinanceiras = [
+    'Separe uma parte da sua renda para investir todo mês.',
+    'Evite compras por impulso e sempre pesquise antes de comprar.',
+    'Acompanhe seus gastos diariamente para não perder o controle.',
+    'Defina metas financeiras claras e acompanhe seu progresso.',
+    'Tenha uma reserva de emergência para imprevistos.',
+    'Prefira pagar à vista e evite juros do cartão de crédito.',
+    'Revise assinaturas e serviços recorrentes que não usa.',
+    'Planeje suas compras grandes e evite parcelamentos longos.',
+    'Use categorias para entender onde mais gasta.',
+    'Reavalie seu orçamento mensalmente.'
+  ];
+  const [dicaIndex, setDicaIndex] = useState(0);
+  function proximaDica() {
+    setDicaIndex((prev) => (prev + 1) % dicasFinanceiras.length);
+  }
+
   if (!logado) {
     return (
       <div className="login-container">
@@ -525,6 +573,42 @@ function App() {
 
   return (
     <div className={logado ? "container dashboard-bg" : "container"}>
+      {/* Avatar de dicas financeiras */}
+      {logado && (
+        <div className="avatar-dica-financeira">
+          <img
+            src="https://cdn-icons-png.flaticon.com/512/4140/4140048.png"
+            alt="Avatar Financeiro"
+            className="avatar-img"
+          />
+          <div className="avatar-balao">
+            <span style={{ fontWeight: 500 }}>{dicasFinanceiras[dicaIndex]}</span>
+            <button className="avatar-btn" onClick={proximaDica} title="Nova dica">🔄</button>
+          </div>
+        </div>
+      )}
+      {logado && getAlertas().length > 0 && (
+        <div style={{
+          background: '#d32f2f',
+          color: '#fff',
+          borderRadius: 8,
+          padding: '0.8rem 1.2rem',
+          margin: '0 0 1.2rem 0',
+          fontWeight: 600,
+          boxShadow: '0 2px 12px #d32f2f44',
+          fontSize: 17,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+          alignItems: 'flex-start',
+        }}>
+          {getAlertas().map((msg, i) => (
+            <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{fontSize: 22}}>⚠️</span> {msg}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="top-bar">
         <button className="btn-sair" onClick={sair}>Sair</button>
       </div>
