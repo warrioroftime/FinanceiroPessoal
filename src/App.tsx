@@ -591,7 +591,6 @@ function App() {
 
   return (
     <div className={logado ? "container dashboard-bg" : "container"}>
-      {/* Avatar de dicas financeiras */}
       {logado && (
         <div className="avatar-dica-financeira">
           <img
@@ -627,6 +626,7 @@ function App() {
           ))}
         </div>
       )}
+      <h1 className="titulo-principal">Controle Financeiro Pessoal</h1>
       <div className="top-bar">
         <button className="btn-sair" onClick={sair}>Sair</button>
       </div>
@@ -637,501 +637,498 @@ function App() {
           <input type="file" accept="application/json" style={{ display: 'none' }} onChange={importarLancamentos} />
         </label>
       </div>
-      <h1 style={{ marginBottom: 18 }}>Controle Financeiro Pessoal</h1>
-      <div className="abas">
-        <button className={aba === 'lancamentos' ? 'aba-ativa' : ''} onClick={() => setAba('lancamentos')}>Lançamentos</button>
-        <button className={aba === 'metas' ? 'aba-ativa' : ''} onClick={() => setAba('metas')}>Metas do mês</button>
-        <button className={aba === 'categorias' ? 'aba-ativa' : ''} onClick={() => setAba('categorias')}>Categorias</button>
-        <button className={aba === 'graficos' ? 'aba-ativa' : ''} onClick={() => setAba('graficos')}>Gráficos</button>
-        <button className={aba === 'agenda' ? 'aba-ativa' : ''} onClick={() => setAba('agenda')}>Agenda</button>
-      </div>
-      {aba === 'lancamentos' && (
-        <>
-          <div className="secao">
-            <div className="secao-titulo">Filtros avançados</div>
-            <div className="filtros-avancados">
-              <select value={filtroCategoria} onChange={e => setFiltroCategoria(e.target.value ? Number(e.target.value) : '')}>
-                <option value="">Todas categorias</option>
-                {categorias.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.nome}</option>
-                ))}
-              </select>
-              <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value as any)}>
-                <option value="todos">Todos</option>
-                <option value="receita">Receita</option>
-                <option value="despesa">Despesa</option>
-              </select>
-              <input
-                type="number"
-                placeholder="Valor mínimo"
-                value={filtroValorMin}
-                onChange={e => setFiltroValorMin(e.target.value)}
-              />
-              <input
-                type="number"
-                placeholder="Valor máximo"
-                value={filtroValorMax}
-                onChange={e => setFiltroValorMax(e.target.value)}
-              />
-              <input
-                type="text"
-                placeholder="Buscar descrição"
-                value={filtroTexto}
-                onChange={e => setFiltroTexto(e.target.value)}
-              />
-              <button type="button" onClick={() => {
-                setFiltroCategoria('');
-                setFiltroValorMin('');
-                setFiltroValorMax('');
-                setFiltroTexto('');
-                setFiltroTipo('todos');
-              }}>Limpar filtros</button>
-            </div>
-          </div>
-          <div className="secao">
-            <div className="secao-titulo">Lançamentos do mês</div>
-            <div className="filtro-mes" style={{ marginBottom: 18 }}>
-              <label>
-                Mês:&nbsp;
-                <input
-                  type="month"
-                  value={mesSelecionado}
-                  onChange={e => setMesSelecionado(e.target.value)}
-                />
-              </label>
-            </div>
-            <button style={{marginBottom: 18, background: '#1976d2', color: '#fff', border: 'none', borderRadius: 6, padding: '0.7rem 1.5rem', fontWeight: 600, cursor: 'pointer'}}
-              onClick={async () => {
-                const receitas = lancamentosFiltrados.filter(l => l.tipo === 'receita');
-                const despesas = lancamentosFiltrados.filter(l => l.tipo === 'despesa');
-                const totalReceitas = receitas.reduce((acc, l) => acc + l.valor, 0);
-                const totalDespesas = despesas.reduce((acc, l) => acc + l.valor, 0);
-                const saldoMes = totalReceitas - totalDespesas;
-                const doc = new jsPDF();
-                let y = 15;
-                doc.setFontSize(16);
-                doc.text(`RELATÓRIO FINANCEIRO - ${mesSelecionado}`, 10, y);
-                y += 10;
-                doc.setFontSize(12);
-                doc.text(`Receitas: R$ ${totalReceitas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 10, y);
-                y += 8;
-                doc.text(`Despesas: R$ ${totalDespesas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 10, y);
-                y += 8;
-                doc.text(`Saldo: R$ ${saldoMes.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 10, y);
-                y += 12;
-                // --- GRAFICO PIZZA (OFFSCREEN) ---
-                let pizzaImgData = null;
-                try {
-                  const canvas = document.createElement('canvas');
-                  canvas.width = 400; canvas.height = 250;
-                  const Chart = (await import('chart.js/auto')).default;
-                  const chart = new Chart(canvas, {
-                    type: 'pie',
-                    data: dadosPizza,
-                    options: {
-                      plugins: { legend: { display: true, position: 'top' } },
-                      animation: false,
-                      responsive: false,
-                      events: []
-                    }
-                  });
-                  chart.update();
-                  await new Promise(res => setTimeout(res, 120));
-                  pizzaImgData = canvas.toDataURL('image/png');
-                  chart.destroy();
-                } catch (e) { pizzaImgData = null; }
-                if (pizzaImgData) {
-                  doc.addImage(pizzaImgData, 'PNG', 10, y, 80, 50);
-                  y += 55;
-                }
-                // --- GRAFICO BARRA (OFFSCREEN) ---
-                let barraImgData = null;
-                try {
-                  const canvas = document.createElement('canvas');
-                  canvas.width = 500; canvas.height = 250;
-                  const Chart = (await import('chart.js/auto')).default;
-                  const chart = new Chart(canvas, {
-                    type: 'bar',
-                    data: dadosBarra,
-                    options: {
-                      plugins: { legend: { display: true, position: 'top' } },
-                      scales: {
-                        x: { title: { display: true, text: 'Mês' } },
-                        y: { title: { display: true, text: 'Valor (R$)' } }
-                      },
-                      animation: false,
-                      responsive: false,
-                      events: []
-                    }
-                  });
-                  chart.update();
-                  await new Promise(res => setTimeout(res, 120));
-                  barraImgData = canvas.toDataURL('image/png');
-                  chart.destroy();
-                } catch (e) { barraImgData = null; }
-                if (barraImgData) {
-                  doc.addImage(barraImgData, 'PNG', 10, y, 120, 50);
-                  y += 55;
-                }
-                // --- AGENDAMENTOS DO MÊS ---
-                doc.setFontSize(13);
-                doc.text('--- AGENDAMENTOS DO MÊS ---', 10, y);
-                y += 8;
-                doc.setFontSize(11);
-                const agsMes = agendamentos.filter(a => a.data.startsWith(mesSelecionado));
-                if (agsMes.length === 0) {
-                  doc.text('Nenhum agendamento para este mês.', 10, y);
-                  y += 7;
-                } else {
-                  agsMes.forEach(a => {
-                    if (y > 270) { doc.addPage(); y = 15; }
-                    doc.text(`• ${a.data.split('-').reverse().join('/')} - ${a.descricao}`, 10, y);
-                    y += 7;
-                  });
-                }
-                // --- RECEITAS E DESPESAS DETALHADAS ---
-                y += 5;
-                doc.setFontSize(13);
-                doc.text('--- RECEITAS ---', 10, y);
-                y += 8;
-                doc.setFontSize(11);
-                receitas.forEach(l => {
-                  if (y > 270) { doc.addPage(); y = 15; }
-                  doc.text(`• ${l.descricao} | R$ ${l.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})} | ${l.data}`, 10, y);
-                  y += 7;
-                });
-                y += 5;
-                doc.setFontSize(13);
-                doc.text('--- DESPESAS ---', 10, y);
-                y += 8;
-                doc.setFontSize(11);
-                despesas.forEach(l => {
-                  if (y > 270) { doc.addPage(); y = 15; }
-                  doc.text(`• ${l.descricao} | R$ ${l.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})} | ${l.data}`, 10, y);
-                  y += 7;
-                });
-                try {
-                  doc.save(`relatorio-financeiro-${mesSelecionado}.pdf`);
-                } catch (err) {
-                  alert('Erro ao gerar relatório PDF: ' + (err instanceof Error ? err.message : err));
-                }
-              }}>
-              Gerar Relatório do Mês (PDF)
-            </button>
-            <div className="saldo" style={{ color: saldo < 0 ? '#ff5252' : '#fff', fontWeight: saldo < 0 ? 'bold' : undefined, marginBottom: 18 }}>
-              <strong>Saldo do mês:</strong> R$ {saldo.toFixed(2)}
-              {saldo < 0 && <span style={{ color: '#ff5252', marginLeft: 10, fontWeight: 'bold' }}>Atenção: saldo negativo!</span>}
-            </div>
-            <form onSubmit={adicionarLancamento} className="formulario" style={{ marginBottom: 18 }}>
-              <input
-                type="text"
-                placeholder="Descrição"
-                value={descricao}
-                onChange={e => setDescricao(e.target.value)}
-              />
-              <input
-                type="number"
-                placeholder="Valor"
-                value={valor}
-                onChange={e => setValor(e.target.value)}
-                step="0.01"
-              />
-              <input
-                type="date"
-                value={data}
-                onChange={e => setData(e.target.value)}
-              />
-              <select value={tipo} onChange={e => setTipo(e.target.value as 'receita' | 'despesa')}>
-                <option value="receita">Receita</option>
-                <option value="despesa">Despesa</option>
-              </select>
-              <select value={categoriaId ?? ''} onChange={e => setCategoriaId(e.target.value ? Number(e.target.value) : null)}>
-                <option value="">Categoria</option>
-                {categorias.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.nome}</option>
-                ))}
-              </select>
-              <div className="formulario-final">
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 0, whiteSpace: 'nowrap' }}>
-                  <input
-                    type="checkbox"
-                    checked={recorrente}
-                    onChange={e => setRecorrente(e.target.checked)}
-                    style={{marginLeft:-160, width: 70, height: 16 }}
-                  />
-                  <span style={{marginLeft: -170, width: 110, height: 20}}>Recorrente</span>
-                </label>
-                <button type="submit">Adicionar</button>
-              </div>
-            </form>
-            <h2 style={{ margin: '1.2rem 0 0.7rem 0', color: '#4caf50', fontSize: '1.18rem' }}>Lançamentos</h2>
-            <div className="lancamentos-separadas">
-              <div
-                className={`lancamentos-col receitas-col${dragOverTipo === 'receita' ? ' drag-over' : ''}`}
-                onDrop={() => onDrop('receita')}
-                onDragOver={e => onDragOver(e, 'receita')}
-                onDragLeave={onDragLeave}
-              >
-                <h3 className="lancamentos-col-titulo receitas-titulo">
-                  <span className="lancamentos-col-icone">💰</span> Receitas
-                  <span className="lancamentos-col-total receitas-total">
-                    R$ {lancamentosFiltrados.filter(l => l.tipo === 'receita').reduce((acc, l) => acc + l.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </h3>
-                <ul className="lancamentos">
-                  {lancamentosFiltrados.filter(l => l.tipo === 'receita').map(l => {
-                    const cat = categorias.find(c => c.id === l.categoria_id);
-                    return (
-                      <li
-                        key={l.id}
-                        className={l.tipo + ' lancamento-card animated-card'}
-                        draggable
-                        onDragStart={() => onDragStart(l.id)}
-                        style={l.recorrente ? { border: '2px dashed #1976d2', background: '#232f3a' } : {}}
-                        title={l.recorrente ? 'Lançamento recorrente' : ''}
-                      >
-                        <div className="lancamento-info">
-                          <span className="lancamento-icone" aria-label="Receita" title="Receita">💰</span>
-                          <span className="lancamento-descricao">
-                            {l.descricao} {l.recorrente ? <span style={{ fontSize: 14, color: '#1976d2', marginLeft: 4 }} title="Recorrente">🔁</span> : null}
-                          </span>
-                          <span className="lancamento-valor">+ R$ {l.valor.toFixed(2)}</span>
-                          <span className="lancamento-data">{l.data && new Date(l.data).toLocaleDateString()}</span>
-                          {cat && <span style={{ background: cat.cor, color: '#fff', borderRadius: 4, padding: '0 6px', fontSize: 13 }}>{cat.nome}</span>}
-                        </div>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => removerLancamento(l.id)} className="remover" title="Remover lançamento">Remover</button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-              <div
-                className={`lancamentos-col despesas-col${dragOverTipo === 'despesa' ? ' drag-over' : ''}`}
-                onDrop={() => onDrop('despesa')}
-                onDragOver={e => onDragOver(e, 'despesa')}
-                onDragLeave={onDragLeave}
-              >
-                <h3 className="lancamentos-col-titulo despesas-titulo">
-                  <span className="lancamentos-col-icone">💸</span> Despesas
-                  <span className="lancamentos-col-total despesas-total">
-                    R$ {lancamentosFiltrados.filter(l => l.tipo === 'despesa').reduce((acc, l) => acc + l.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </h3>
-                <ul className="lancamentos">
-                  {lancamentosFiltrados.filter(l => l.tipo === 'despesa').map(l => {
-                    const cat = categorias.find(c => c.id === l.categoria_id);
-                    return (
-                      <li
-                        key={l.id}
-                        className={l.tipo + ' lancamento-card animated-card'}
-                        draggable
-                        onDragStart={() => onDragStart(l.id)}
-                        style={l.recorrente ? { border: '2px dashed #1976d2', background: '#2f2323' } : {}}
-                        title={l.recorrente ? 'Lançamento recorrente' : ''}
-                      >
-                        <div className="lancamento-info">
-                          <span className="lancamento-icone" aria-label="Despesa" title="Despesa">💸</span>
-                          <span className="lancamento-descricao">
-                            {l.descricao} {l.recorrente ? <span style={{ fontSize: 14, color: '#1976d2', marginLeft: 4 }} title="Recorrente">🔁</span> : null}
-                          </span>
-                          <span className="lancamento-valor">- R$ {l.valor.toFixed(2)}</span>
-                          <span className="lancamento-data">{l.data && new Date(l.data).toLocaleDateString()}</span>
-                          {cat && <span style={{ background: cat.cor, color: '#fff', borderRadius: 4, padding: '0 6px', fontSize: 13 }}>{cat.nome}</span>}
-                        </div>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button onClick={() => removerLancamento(l.id)} className="remover" title="Remover lançamento">Remover</button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-      {aba === 'metas' && (
-        <div className="secao">
-          <div className="secao-titulo">Metas do mês</div>
-          <form onSubmit={editandoMeta ? editarMeta : adicionarMeta} className="formulario">
-            <input
-              type="number"
-              placeholder="Valor da meta"
-              value={metaValor}
-              onChange={e => setMetaValor(e.target.value)}
-            />
-            <select value={metaTipo} onChange={e => setMetaTipo(e.target.value as 'receita' | 'despesa')}>
-              <option value="receita">Receita</option>
-              <option value="despesa">Despesa</option>
-            </select>
-            <select value={metaCategoriaId ?? ''} onChange={e => setMetaCategoriaId(e.target.value ? Number(e.target.value) : null)}>
-              <option value="">Todas categorias</option>
-              {categorias.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.nome}</option>
-              ))}
-            </select>
-            <button type="submit">{editandoMeta ? 'Salvar' : 'Adicionar'}</button>
-            {editandoMeta && (
-              <button type="button" onClick={() => { setEditandoMeta(null); setMetaValor(''); setMetaCategoriaId(null); setMetaTipo('despesa'); }}>Cancelar</button>
-            )}
-          </form>
-          <ul style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-            {metasDoMes().map(meta => {
-              const cat = categorias.find(c => c.id === meta.categoria_id);
-              const progresso = progressoMeta(meta);
-              const ultrapassou = progresso > 100;
-              return (
-                <li key={meta.id} style={{ background: ultrapassou ? '#d32f2f' : '#23272f', color: '#fff', borderRadius: 6, padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', border: ultrapassou ? '2px solid #ff5252' : undefined }}>
-                  <span>{meta.tipo === 'receita' ? 'Receber' : 'Gastar'} R$ {meta.valor.toFixed(2)} {cat && (<span style={{ background: cat.cor, color: '#fff', borderRadius: 4, padding: '0 6px', fontSize: 13 }}>{cat.nome}</span>)}
-                    {ultrapassou && <span style={{ color: '#ffbaba', marginLeft: 10, fontWeight: 'bold' }}>Limite ultrapassado!</span>}
-                  </span>
-                  <div style={{ flex: 1, minWidth: 120, background: '#444', borderRadius: 4, height: 12, margin: '0 8px', position: 'relative' }}>
-                    <div style={{ width: Math.min(progresso, 100) + '%', background: meta.tipo === 'receita' ? '#4caf50' : '#d32f2f', height: '100%', borderRadius: 4, transition: 'width 0.3s' }}></div>
+      {logado && (
+        <div className="layout-flex">
+          <nav className="sidebar">
+            <button className={aba === 'lancamentos' ? 'aba-ativa' : ''} onClick={() => setAba('lancamentos')}>Lançamentos</button>
+            <button className={aba === 'metas' ? 'aba-ativa' : ''} onClick={() => setAba('metas')}>Metas do mês</button>
+            <button className={aba === 'categorias' ? 'aba-ativa' : ''} onClick={() => setAba('categorias')}>Categorias</button>
+            <button className={aba === 'graficos' ? 'aba-ativa' : ''} onClick={() => setAba('graficos')}>Gráficos</button>
+            <button className={aba === 'agenda' ? 'aba-ativa' : ''} onClick={() => setAba('agenda')}>Agenda</button>
+          </nav>
+          <div className="main-content">
+            {aba === 'lancamentos' && (
+              <>
+                <div className="secao">
+                  <div className="secao-titulo">Filtros avançados</div>
+                  <div className="filtros-avancados">
+                    <select value={filtroCategoria} onChange={e => setFiltroCategoria(e.target.value ? Number(e.target.value) : '')}>
+                      <option value="">Todas categorias</option>
+                      {categorias.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                      ))}
+                    </select>
+                    <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value as any)}>
+                      <option value="todos">Todos</option>
+                      <option value="receita">Receita</option>
+                      <option value="despesa">Despesa</option>
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="Valor mínimo"
+                      value={filtroValorMin}
+                      onChange={e => setFiltroValorMin(e.target.value)}
+                    />
+                    <input
+                      type="number"
+                      placeholder="Valor máximo"
+                      value={filtroValorMax}
+                      onChange={e => setFiltroValorMax(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Buscar descrição"
+                      value={filtroTexto}
+                      onChange={e => setFiltroTexto(e.target.value)}
+                    />
+                    <button type="button" onClick={() => {
+                      setFiltroCategoria('');
+                      setFiltroValorMin('');
+                      setFiltroValorMax('');
+                      setFiltroTexto('');
+                      setFiltroTipo('todos');
+                    }}>Limpar filtros</button>
                   </div>
-                  <span style={{ minWidth: 40 }}>{progresso.toFixed(0)}%</span>
-                  <button style={{ marginLeft: 4 }} onClick={() => { setEditandoMeta(meta); setMetaValor(meta.valor.toString()); setMetaTipo(meta.tipo); setMetaCategoriaId(meta.categoria_id || null); }}>✏️</button>
-                  <button style={{ marginLeft: 2 }} onClick={() => removerMeta(meta.id)}>🗑️</button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-      {aba === 'categorias' && (
-        <div className="secao">
-          <div className="secao-titulo">Categorias</div>
-          <form onSubmit={editandoCategoria ? editarCategoria : adicionarCategoria} className="formulario">
-            <input
-              type="text"
-              placeholder="Nome da categoria"
-              value={novaCategoria}
-              onChange={e => setNovaCategoria(e.target.value)}
-            />
-            <input
-              type="color"
-              value={corCategoria}
-              onChange={e => setCorCategoria(e.target.value)}
-              title="Cor da categoria"
-            />
-            <button type="submit">{editandoCategoria ? 'Salvar' : 'Adicionar'}</button>
-            {editandoCategoria && (
-              <button type="button" onClick={() => { setEditandoCategoria(null); setNovaCategoria(''); setCorCategoria('#1976d2'); }}>Cancelar</button>
+                </div>
+                <div className="secao">
+                  <div className="secao-titulo">Lançamentos do mês</div>
+                  <div className="filtro-mes" style={{ marginBottom: 18 }}>
+                    <label>
+                      Mês:&nbsp;
+                      <input
+                        type="month"
+                        value={mesSelecionado}
+                        onChange={e => setMesSelecionado(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <button style={{marginBottom: 18, background: '#1976d2', color: '#fff', border: 'none', borderRadius: 6, padding: '0.7rem 1.5rem', fontWeight: 600, cursor: 'pointer'}}
+                    onClick={async () => {
+                      const receitas = lancamentosFiltrados.filter(l => l.tipo === 'receita');
+                      const despesas = lancamentosFiltrados.filter(l => l.tipo === 'despesa');
+                      const totalReceitas = receitas.reduce((acc, l) => acc + l.valor, 0);
+                      const totalDespesas = despesas.reduce((acc, l) => acc + l.valor, 0);
+                      const saldoMes = totalReceitas - totalDespesas;
+                      const doc = new jsPDF();
+                      let y = 15;
+                      doc.setFontSize(16);
+                      doc.text(`RELATÓRIO FINANCEIRO - ${mesSelecionado}`, 10, y);
+                      y += 10;
+                      doc.setFontSize(12);
+                      doc.text(`Receitas: R$ ${totalReceitas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 10, y);
+                      y += 8;
+                      doc.text(`Despesas: R$ ${totalDespesas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 10, y);
+                      y += 8;
+                      doc.text(`Saldo: R$ ${saldoMes.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 10, y);
+                      y += 12;
+                      // --- GRAFICO PIZZA (OFFSCREEN) ---
+                      let pizzaImgData = null;
+                      try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 400; canvas.height = 250;
+                        const Chart = (await import('chart.js/auto')).default;
+                        const chart = new Chart(canvas, {
+                          type: 'pie',
+                          data: dadosPizza,
+                          options: {
+                            plugins: { legend: { display: true, position: 'top' } },
+                            animation: false,
+                            responsive: false,
+                            events: []
+                          }
+                        });
+                        chart.update();
+                        await new Promise(res => setTimeout(res, 120));
+                        pizzaImgData = canvas.toDataURL('image/png');
+                        chart.destroy();
+                      } catch (e) { pizzaImgData = null; }
+                      if (pizzaImgData) {
+                        doc.addImage(pizzaImgData, 'PNG', 10, y, 80, 50);
+                        y += 55;
+                      }
+                      // --- GRAFICO BARRA (OFFSCREEN) ---
+                      let barraImgData = null;
+                      try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 500; canvas.height = 250;
+                        const Chart = (await import('chart.js/auto')).default;
+                        const chart = new Chart(canvas, {
+                          type: 'bar',
+                          data: dadosBarra,
+                          options: {
+                            plugins: { legend: { display: true, position: 'top' } },
+                            scales: {
+                              x: { title: { display: true, text: 'Mês' } },
+                              y: { title: { display: true, text: 'Valor (R$)' } }
+                            },
+                            animation: false,
+                            responsive: false,
+                            events: []
+                          }
+                        });
+                        chart.update();
+                        await new Promise(res => setTimeout(res, 120));
+                        barraImgData = canvas.toDataURL('image/png');
+                        chart.destroy();
+                      } catch (e) { barraImgData = null; }
+                      if (barraImgData) {
+                        doc.addImage(barraImgData, 'PNG', 10, y, 120, 50);
+                        y += 55;
+                      }
+                      // --- AGENDAMENTOS DO MÊS ---
+                      doc.setFontSize(13);
+                      doc.text('--- AGENDAMENTOS DO MÊS ---', 10, y);
+                      y += 8;
+                      doc.setFontSize(11);
+                      const agsMes = agendamentos.filter(a => a.data.startsWith(mesSelecionado));
+                      if (agsMes.length === 0) {
+                        doc.text('Nenhum agendamento para este mês.', 10, y);
+                        y += 7;
+                      } else {
+                        agsMes.forEach(a => {
+                          if (y > 270) { doc.addPage(); y = 15; }
+                          doc.text(`• ${a.data.split('-').reverse().join('/')} - ${a.descricao}`, 10, y);
+                          y += 7;
+                        });
+                      }
+                      // --- RECEITAS E DESPESAS DETALHADAS ---
+                      y += 5;
+                      doc.setFontSize(13);
+                      doc.text('--- RECEITAS ---', 10, y);
+                      y += 8;
+                      doc.setFontSize(11);
+                      receitas.forEach(l => {
+                        if (y > 270) { doc.addPage(); y = 15; }
+                        doc.text(`• ${l.descricao} | R$ ${l.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})} | ${l.data}`, 10, y);
+                        y += 7;
+                      });
+                      y += 5;
+                      doc.setFontSize(13);
+                      doc.text('--- DESPESAS ---', 10, y);
+                      y += 8;
+                      doc.setFontSize(11);
+                      despesas.forEach(l => {
+                        if (y > 270) { doc.addPage(); y = 15; }
+                        doc.text(`• ${l.descricao} | R$ ${l.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})} | ${l.data}`, 10, y);
+                        y += 7;
+                      });
+                      try {
+                        doc.save(`relatorio-financeiro-${mesSelecionado}.pdf`);
+                      } catch (err) {
+                        alert('Erro ao gerar relatório PDF: ' + (err instanceof Error ? err.message : err));
+                      }
+                    }}>
+                    Gerar Relatório do Mês (PDF)
+                  </button>
+                  <div className="saldo" style={{ color: saldo < 0 ? '#ff5252' : '#fff', fontWeight: saldo < 0 ? 'bold' : undefined, marginBottom: 18 }}>
+                    <strong>Saldo do mês:</strong> R$ {saldo.toFixed(2)}
+                    {saldo < 0 && <span style={{ color: '#ff5252', marginLeft: 10, fontWeight: 'bold' }}>Atenção: saldo negativo!</span>}
+                  </div>
+                  <form onSubmit={adicionarLancamento} className="formulario" style={{ marginBottom: 18 }}>
+                    <input
+                      type="text"
+                      placeholder="Descrição"
+                      value={descricao}
+                      onChange={e => setDescricao(e.target.value)}
+                    />
+                    <input
+                      type="number"
+                      placeholder="Valor"
+                      value={valor}
+                      onChange={e => setValor(e.target.value)}
+                      step="0.01"
+                    />
+                    <input
+                      type="date"
+                      value={data}
+                      onChange={e => setData(e.target.value)}
+                    />
+                    <select value={tipo} onChange={e => setTipo(e.target.value as 'receita' | 'despesa')}>
+                      <option value="receita">Receita</option>
+                      <option value="despesa">Despesa</option>
+                    </select>
+                    <select value={categoriaId ?? ''} onChange={e => setCategoriaId(e.target.value ? Number(e.target.value) : null)}>
+                      <option value="">Categoria</option>
+                      {categorias.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                      ))}
+                    </select>
+                    <div className="formulario-final">
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 0, whiteSpace: 'nowrap' }}>
+                        <input
+                          type="checkbox"
+                          checked={recorrente}
+                          onChange={e => setRecorrente(e.target.checked)}
+                          style={{marginLeft:-160, width: 70, height: 16 }}
+                        />
+                        <span style={{marginLeft: -170, width: 110, height: 20}}>Recorrente</span>
+                      </label>
+                      <button type="submit">Adicionar</button>
+                    </div>
+                  </form>
+                  <h2 style={{ margin: '1.2rem 0 0.7rem 0', color: '#4caf50', fontSize: '1.18rem' }}>Lançamentos</h2>
+                  <div className="lancamentos-separadas">
+                    <div
+                      className={`lancamentos-col receitas-col${dragOverTipo === 'receita' ? ' drag-over' : ''}`}
+                      onDrop={() => onDrop('receita')}
+                      onDragOver={e => onDragOver(e, 'receita')}
+                      onDragLeave={onDragLeave}
+                    >
+                      <h3 className="lancamentos-col-titulo receitas-titulo">
+                        <span className="lancamentos-col-icone">💰</span> Receitas
+                        <span className="lancamentos-col-total receitas-total">
+                          R$ {lancamentosFiltrados.filter(l => l.tipo === 'receita').reduce((acc, l) => acc + l.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </h3>
+                      <ul className="lancamentos">
+                        {lancamentosFiltrados.filter(l => l.tipo === 'receita').map(l => {
+                          const cat = categorias.find(c => c.id === l.categoria_id);
+                          return (
+                            <li
+                              key={l.id}
+                              className={l.tipo + ' lancamento-card animated-card'}
+                              draggable
+                              onDragStart={() => onDragStart(l.id)}
+                              style={l.recorrente ? { border: '2px dashed #1976d2', background: '#232f3a' } : {}}
+                              title={l.recorrente ? 'Lançamento recorrente' : ''}
+                            >
+                              <div className="lancamento-info alinhado">
+                                <span className="lancamento-icone" aria-label="Receita" title="Receita">💰</span>
+                                <span className="lancamento-descricao" title={l.descricao}>{l.descricao} {l.recorrente ? <span style={{ fontSize: 14, color: '#1976d2', marginLeft: 4 }} title="Recorrente">🔁</span> : null}</span>
+                                <span className="lancamento-valor">+ R$ {l.valor.toFixed(2)}</span>
+                                <span className="lancamento-data">{l.data && new Date(l.data).toLocaleDateString()}</span>
+                                {cat && <span className="lancamento-categoria" style={{ background: cat.cor }}>{cat.nome}</span>}
+                              </div>
+                              <button onClick={() => removerLancamento(l.id)} className="remover" title="Remover lançamento">Remover</button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                    <div
+                      className={`lancamentos-col despesas-col${dragOverTipo === 'despesa' ? ' drag-over' : ''}`}
+                      onDrop={() => onDrop('despesa')}
+                      onDragOver={e => onDragOver(e, 'despesa')}
+                      onDragLeave={onDragLeave}
+                    >
+                      <h3 className="lancamentos-col-titulo despesas-titulo">
+                        <span className="lancamentos-col-icone">💸</span> Despesas
+                        <span className="lancamentos-col-total despesas-total">
+                          R$ {lancamentosFiltrados.filter(l => l.tipo === 'despesa').reduce((acc, l) => acc + l.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </h3>
+                      <ul className="lancamentos">
+                        {lancamentosFiltrados.filter(l => l.tipo === 'despesa').map(l => {
+                          const cat = categorias.find(c => c.id === l.categoria_id);
+                          return (
+                            <li
+                              key={l.id}
+                              className={l.tipo + ' lancamento-card animated-card'}
+                              draggable
+                              onDragStart={() => onDragStart(l.id)}
+                              style={l.recorrente ? { border: '2px dashed #1976d2', background: '#2f2323' } : {}}
+                              title={l.recorrente ? 'Lançamento recorrente' : ''}
+                            >
+                              <div className="lancamento-info alinhado">
+                                <span className="lancamento-icone" aria-label="Despesa" title="Despesa">💸</span>
+                                <span className="lancamento-descricao" title={l.descricao}>{l.descricao} {l.recorrente ? <span style={{ fontSize: 14, color: '#1976d2', marginLeft: 4 }} title="Recorrente">🔁</span> : null}</span>
+                                <span className="lancamento-valor">- R$ {l.valor.toFixed(2)}</span>
+                                <span className="lancamento-data">{l.data && new Date(l.data).toLocaleDateString()}</span>
+                                {cat && <span className="lancamento-categoria" style={{ background: cat.cor }}>{cat.nome}</span>}
+                              </div>
+                              <button onClick={() => removerLancamento(l.id)} className="remover" title="Remover lançamento">Remover</button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
-          </form>
-          <ul style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-            {categorias.map(cat => (
-              <li key={cat.id} style={{ background: cat.cor, color: '#fff', borderRadius: 6, padding: '0.3rem 0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                {cat.nome}
-                <button style={{ marginLeft: 4 }} onClick={() => { setEditandoCategoria(cat); setNovaCategoria(cat.nome); setCorCategoria(cat.cor); }}>✏️</button>
-                <button style={{ marginLeft: 2 }} onClick={() => removerCategoria(cat.id)}>🗑️</button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {aba === 'graficos' && (
-        <div className="aba-graficos">
-          <div className="filtro-mes">
-            <label>
-              Mês:&nbsp;
-              <input
-                type="month"
-                value={mesSelecionado}
-                onChange={e => setMesSelecionado(e.target.value)}
-              />
-            </label>
-          </div>
-          <h2>Receitas x Despesas</h2>
-          <div className="grafico-pizza">
-            <Pie data={dadosPizza} />
-          </div>
-          <h2>Receitas e Despesas por Mês</h2>
-          <div className="grafico-barra">
-            <Bar data={dadosBarra} options={{
-              responsive: true,
-              plugins: { legend: { position: 'top' } },
-              scales: {
-                x: { title: { display: true, text: 'Mês' } },
-                y: { title: { display: true, text: 'Valor (R$)' } }
-              }
-            }} />
-          </div>
-          {/* Gráfico de pizza por categoria (despesas) */}
-          <h2>Despesas por Categoria</h2>
-          <div className="grafico-pizza">
-            <Pie data={{
-              labels: categorias.map(c => c.nome),
-              datasets: [
-                {
-                  data: categorias.map(c =>
-                    lancamentosFiltrados.filter(l => l.tipo === 'despesa' && l.categoria_id === c.id)
-                      .reduce((acc, l) => acc + l.valor, 0)
-                  ),
-                  backgroundColor: categorias.map(c => c.cor),
-                  borderWidth: 1,
-                },
-              ],
-            }} />
-          </div>
-          {/* Relatório detalhado por categoria */}
-          <h2>Totais por Categoria (Despesas)</h2>
-          <ul style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start', margin: '0 auto', maxWidth: 400 }}>
-            {categorias.map(c => {
-              const total = lancamentosFiltrados.filter(l => l.tipo === 'despesa' && l.categoria_id === c.id)
-                .reduce((acc, l) => acc + l.valor, 0);
-              if (total === 0) return null;
-              return (
-                <li key={c.id} style={{ background: c.cor, color: '#fff', borderRadius: 6, padding: '0.3rem 0.8rem', marginBottom: 2 }}>
-                  {c.nome}: R$ {total.toFixed(2)}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-      {aba === 'agenda' && (
-        <div className="secao">
-          <h2>Agenda do mês</h2>
-          <form className="formulario" onSubmit={e => {
-            e.preventDefault();
-            if (!novoAgendamento.data || !novoAgendamento.descricao) return;
-            setAgendamentos([...agendamentos, novoAgendamento]);
-            setNovoAgendamento({ data: '', descricao: '' });
-          }}>
-            <input
-              type="date"
-              value={novoAgendamento.data}
-              onChange={e => setNovoAgendamento(a => ({ ...a, data: e.target.value }))}
-              min={mesSelecionado + '-01'}
-              max={mesSelecionado + '-31'}
-              required
-              style={{ maxWidth: 140 }}
-            />
-            <input
-              type="text"
-              placeholder="Descrição do compromisso"
-              value={novoAgendamento.descricao}
-              onChange={e => setNovoAgendamento(a => ({ ...a, descricao: e.target.value }))}
-              maxLength={60}
-              required
-              style={{ maxWidth: 220 }}
-            />
-            <button type="submit">Adicionar</button>
-          </form>
-          <ul style={{ width: '100%', padding: 0, margin: 0, listStyle: 'none' }}>
-            {agendamentos.filter(a => a.data.startsWith(mesSelecionado)).length === 0 && (
-              <li style={{ color: '#aaa', fontStyle: 'italic', padding: '0.7rem' }}>Nenhum agendamento para este mês.</li>
+            {aba === 'metas' && (
+              <div className="secao">
+                <div className="secao-titulo">Metas do mês</div>
+                <form onSubmit={editandoMeta ? editarMeta : adicionarMeta} className="formulario">
+                  <input
+                    type="number"
+                    placeholder="Valor da meta"
+                    value={metaValor}
+                    onChange={e => setMetaValor(e.target.value)}
+                  />
+                  <select value={metaTipo} onChange={e => setMetaTipo(e.target.value as 'receita' | 'despesa')}>
+                    <option value="receita">Receita</option>
+                    <option value="despesa">Despesa</option>
+                  </select>
+                  <select value={metaCategoriaId ?? ''} onChange={e => setMetaCategoriaId(e.target.value ? Number(e.target.value) : null)}>
+                    <option value="">Todas categorias</option>
+                    {categorias.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                    ))}
+                  </select>
+                  <button type="submit">{editandoMeta ? 'Salvar' : 'Adicionar'}</button>
+                  {editandoMeta && (
+                    <button type="button" onClick={() => { setEditandoMeta(null); setMetaValor(''); setMetaCategoriaId(null); setMetaTipo('despesa'); }}>Cancelar</button>
+                  )}
+                </form>
+                <ul style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                  {metasDoMes().map(meta => {
+                    const cat = categorias.find(c => c.id === meta.categoria_id);
+                    const progresso = progressoMeta(meta);
+                    const ultrapassou = progresso > 100;
+                    return (
+                      <li key={meta.id} style={{ background: ultrapassou ? '#d32f2f' : '#23272f', color: '#fff', borderRadius: 6, padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', border: ultrapassou ? '2px solid #ff5252' : undefined }}>
+                        <span>{meta.tipo === 'receita' ? 'Receber' : 'Gastar'} R$ {meta.valor.toFixed(2)} {cat && (<span style={{ background: cat.cor, color: '#fff', borderRadius: 4, padding: '0 6px', fontSize: 13 }}>{cat.nome}</span>)}
+                          {ultrapassou && <span style={{ color: '#ffbaba', marginLeft: 10, fontWeight: 'bold' }}>Limite ultrapassado!</span>}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 120, background: '#444', borderRadius: 4, height: 12, margin: '0 8px', position: 'relative' }}>
+                          <div style={{ width: Math.min(progresso, 100) + '%', background: meta.tipo === 'receita' ? '#4caf50' : '#d32f2f', height: '100%', borderRadius: 4, transition: 'width 0.3s' }}></div>
+                        </div>
+                        <span style={{ minWidth: 40 }}>{progresso.toFixed(0)}%</span>
+                        <button style={{ marginLeft: 4 }} onClick={() => { setEditandoMeta(meta); setMetaValor(meta.valor.toString()); setMetaTipo(meta.tipo); setMetaCategoriaId(meta.categoria_id || null); }}>✏️</button>
+                        <button style={{ marginLeft: 2 }} onClick={() => removerMeta(meta.id)}>🗑️</button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             )}
-            {agendamentos.filter(a => a.data.startsWith(mesSelecionado)).sort((a, b) => a.data.localeCompare(b.data)).map((a, i) => (
-              <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#23272f', color: '#fff', borderRadius: 8, marginBottom: 6, padding: '0.6rem 1rem' }}>
-                <span style={{ minWidth: 90, fontWeight: 500 }}>{a.data.split('-').reverse().join('/')}</span>
-                <span style={{ flex: 1 }}>{a.descricao}</span>
-                <button style={{ background: '#d32f2f', color: '#fff', border: 'none', borderRadius: 5, padding: '0.2rem 0.7rem', cursor: 'pointer' }} onClick={() => setAgendamentos(ags => ags.filter((_, idx) => idx !== agendamentos.findIndex(ag => ag.data === a.data && ag.descricao === a.descricao)))}>Remover</button>
-              </li>
-            ))}
-          </ul>
+            {aba === 'categorias' && (
+              <div className="secao">
+                <div className="secao-titulo">Categorias</div>
+                <form onSubmit={editandoCategoria ? editarCategoria : adicionarCategoria} className="formulario">
+                  <input
+                    type="text"
+                    placeholder="Nome da categoria"
+                    value={novaCategoria}
+                    onChange={e => setNovaCategoria(e.target.value)}
+                  />
+                  <input
+                    type="color"
+                    value={corCategoria}
+                    onChange={e => setCorCategoria(e.target.value)}
+                    title="Cor da categoria"
+                  />
+                  <button type="submit">{editandoCategoria ? 'Salvar' : 'Adicionar'}</button>
+                  {editandoCategoria && (
+                    <button type="button" onClick={() => { setEditandoCategoria(null); setNovaCategoria(''); setCorCategoria('#1976d2'); }}>Cancelar</button>
+                  )}
+                </form>
+                <ul style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                  {categorias.map(cat => (
+                    <li key={cat.id} style={{ background: cat.cor, color: '#fff', borderRadius: 6, padding: '0.3rem 0.8rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {cat.nome}
+                      <button style={{ marginLeft: 4 }} onClick={() => { setEditandoCategoria(cat); setNovaCategoria(cat.nome); setCorCategoria(cat.cor); }}>✏️</button>
+                      <button style={{ marginLeft: 2 }} onClick={() => removerCategoria(cat.id)}>🗑️</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {aba === 'graficos' && (
+              <div className="aba-graficos">
+                <div className="filtro-mes">
+                  <label>
+                    Mês:&nbsp;
+                    <input
+                      type="month"
+                      value={mesSelecionado}
+                      onChange={e => setMesSelecionado(e.target.value)}
+                    />
+                  </label>
+                </div>
+                <h2>Receitas x Despesas</h2>
+                <div className="grafico-pizza">
+                  <Pie data={dadosPizza} />
+                </div>
+                <h2>Receitas e Despesas por Mês</h2>
+                <div className="grafico-barra">
+                  <Bar data={dadosBarra} options={{
+                    responsive: true,
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                      x: { title: { display: true, text: 'Mês' } },
+                      y: { title: { display: true, text: 'Valor (R$)' } }
+                    }
+                  }} />
+                </div>
+                {/* Gráfico de pizza por categoria (despesas) */}
+                <h2>Despesas por Categoria</h2>
+                <div className="grafico-pizza">
+                  <Pie data={{
+                    labels: categorias.map(c => c.nome),
+                    datasets: [
+                      {
+                        data: categorias.map(c =>
+                          lancamentosFiltrados.filter(l => l.tipo === 'despesa' && l.categoria_id === c.id)
+                            .reduce((acc, l) => acc + l.valor, 0)
+                        ),
+                        backgroundColor: categorias.map(c => c.cor),
+                        borderWidth: 1,
+                      },
+                    ],
+                  }} />
+                </div>
+                {/* Relatório detalhado por categoria */}
+                <h2>Totais por Categoria (Despesas)</h2>
+                <ul style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start', margin: '0 auto', maxWidth: 400 }}>
+                  {categorias.map(c => {
+                    const total = lancamentosFiltrados.filter(l => l.tipo === 'despesa' && l.categoria_id === c.id)
+                      .reduce((acc, l) => acc + l.valor, 0);
+                    if (total === 0) return null;
+                    return (
+                      <li key={c.id} style={{ background: c.cor, color: '#fff', borderRadius: 6, padding: '0.3rem 0.8rem', marginBottom: 2 }}>
+                        {c.nome}: R$ {total.toFixed(2)}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+            {aba === 'agenda' && (
+              <div className="secao">
+                <h2>Agenda do mês</h2>
+                <form className="formulario" onSubmit={e => {
+                  e.preventDefault();
+                  if (!novoAgendamento.data || !novoAgendamento.descricao) return;
+                  setAgendamentos([...agendamentos, novoAgendamento]);
+                  setNovoAgendamento({ data: '', descricao: '' });
+                }}>
+                  <input
+                    type="date"
+                    value={novoAgendamento.data}
+                    onChange={e => setNovoAgendamento(a => ({ ...a, data: e.target.value }))}
+                    min={mesSelecionado + '-01'}
+                    max={mesSelecionado + '-31'}
+                    required
+                    style={{ maxWidth: 140 }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Descrição do compromisso"
+                    value={novoAgendamento.descricao}
+                    onChange={e => setNovoAgendamento(a => ({ ...a, descricao: e.target.value }))}
+                    maxLength={60}
+                    required
+                    style={{ maxWidth: 220 }}
+                  />
+                  <button type="submit">Adicionar</button>
+                </form>
+                <ul style={{ width: '100%', padding: 0, margin: 0, listStyle: 'none' }}>
+                  {agendamentos.filter(a => a.data.startsWith(mesSelecionado)).length === 0 && (
+                    <li style={{ color: '#aaa', fontStyle: 'italic', padding: '0.7rem' }}>Nenhum agendamento para este mês.</li>
+                  )}
+                  {agendamentos.filter(a => a.data.startsWith(mesSelecionado)).sort((a, b) => a.data.localeCompare(b.data)).map((a, i) => (
+                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#23272f', color: '#fff', borderRadius: 8, marginBottom: 6, padding: '0.6rem 1rem' }}>
+                      <span style={{ minWidth: 90, fontWeight: 500 }}>{a.data.split('-').reverse().join('/')}</span>
+                      <span style={{ flex: 1 }}>{a.descricao}</span>
+                      <button style={{ background: '#d32f2f', color: '#fff', border: 'none', borderRadius: 5, padding: '0.2rem 0.7rem', cursor: 'pointer' }} onClick={() => setAgendamentos(ags => ags.filter((_, idx) => idx !== agendamentos.findIndex(ag => ag.data === a.data && ag.descricao === a.descricao)))}>Remover</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
