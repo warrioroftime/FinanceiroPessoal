@@ -678,9 +678,9 @@ function App() {
                     type="checkbox"
                     checked={recorrente}
                     onChange={e => setRecorrente(e.target.checked)}
-                    style={{ width: 16, height: 16 }}
+                    style={{marginLeft:-160, width: 70, height: 16 }}
                   />
-                  <span style={{marginLeft: 2}}>Recorrente</span>
+                  <span style={{marginLeft: -170, width: 110, height: 20}}>Recorrente</span>
                 </label>
                 <button type="submit">Adicionar</button>
               </div>
