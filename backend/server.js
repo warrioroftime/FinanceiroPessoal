@@ -111,13 +111,13 @@ app.post('/importar', (req, res) => {
   });
   catStmt.finalize();
   // Importar metas
-  const metaStmt = db.prepare('INSERT INTO metas (id, ano_mes, tipo, valor, categoria_id) VALUES (?, ?, ?, ?, ?)');
+  const metaStmt = db.prepare('INSERT OR REPLACE INTO metas (id, ano_mes, tipo, valor, categoria_id) VALUES (?, ?, ?, ?, ?)');
   metas.forEach(m => {
     metaStmt.run([m.id, m.ano_mes, m.tipo, m.valor, m.categoria_id || null]);
   });
   metaStmt.finalize();
   // Importar lançamentos
-  const lancStmt = db.prepare('INSERT INTO lancamentos (id, tipo, descricao, valor, data, categoria_id, recorrente) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const lancStmt = db.prepare('INSERT OR REPLACE INTO lancamentos (id, tipo, descricao, valor, data, categoria_id, recorrente) VALUES (?, ?, ?, ?, ?, ?, ?)');
   lancamentos.forEach(l => {
     lancStmt.run([
       l.id,

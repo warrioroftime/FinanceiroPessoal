@@ -60,7 +60,7 @@ function App() {
     const hoje = new Date();
     return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [aba, setAba] = useState<'lancamentos' | 'graficos' | 'metas' | 'categorias'>('lancamentos');
+  const [aba, setAba] = useState<'lancamentos' | 'metas' | 'categorias' | 'graficos' | 'agenda'>('lancamentos');
   const [logado, setLogado] = useState(false);
   const [usuario, setUsuario] = useState('');
   const [senha, setSenha] = useState('');
@@ -165,6 +165,19 @@ function App() {
       .then(res => res.json())
       .then(data => setMetas(data));
   }, [logado]);
+
+  // Estado para agendamentos
+  const [agendamentos, setAgendamentos] = useState<{ data: string; descricao: string }[]>([]);
+  const [novoAgendamento, setNovoAgendamento] = useState({ data: '', descricao: '' });
+
+  // Salvar agendamentos no localStorage
+  useEffect(() => {
+    const ags = localStorage.getItem('agendamentos');
+    if (ags) setAgendamentos(JSON.parse(ags));
+  }, []);
+  useEffect(() => {
+    localStorage.setItem('agendamentos', JSON.stringify(agendamentos));
+  }, [agendamentos]);
 
   function adicionarLancamento(e: React.FormEvent) {
     e.preventDefault();
@@ -315,27 +328,27 @@ function App() {
       .catch(() => setErroLogin('Erro de conexão com o servidor.'));
   }
 
-  // Função para exportar lançamentos, metas e categorias (JSON)
+  // Função para exportar lançamentos, metas, categorias e agendamentos (JSON)
   function exportarLancamentos() {
-    fetch('http://localhost:3001/exportar')
-      .then(res => {
-        if (!res.ok) throw new Error('Erro ao exportar dados');
-        return res.blob();
-      })
-      .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'financeiro_exportado.json';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-      })
-      .catch(err => alert('Erro ao exportar: ' + err.message));
+    Promise.all([
+      fetch('http://localhost:3001/lancamentos').then(res => res.json()),
+      fetch('http://localhost:3001/metas').then(res => res.json()),
+      fetch('http://localhost:3001/categorias').then(res => res.json())
+    ]).then(([lancamentos, metas, categorias]) => {
+      const dados = { lancamentos, metas, categorias, agendamentos };
+      const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'financeiro_exportado.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    }).catch(err => alert('Erro ao exportar: ' + err.message));
   }
 
-  // Função para importar lançamentos, metas e categorias (JSON)
+  // Função para importar lançamentos, metas, categorias e agendamentos (JSON)
   function importarLancamentos(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -348,7 +361,12 @@ function App() {
         if (Array.isArray(data)) {
           body = JSON.stringify({ lancamentos: data, metas: [], categorias: [] });
         } else {
-          body = JSON.stringify(data);
+          body = JSON.stringify({ lancamentos: data.lancamentos || [], metas: data.metas || [], categorias: data.categorias || [] });
+          // Importar agendamentos se existirem
+          if (data.agendamentos) {
+            setAgendamentos(data.agendamentos);
+            localStorage.setItem('agendamentos', JSON.stringify(data.agendamentos));
+          }
         }
         fetch('http://localhost:3001/importar', {
           method: 'POST',
@@ -625,6 +643,7 @@ function App() {
         <button className={aba === 'metas' ? 'aba-ativa' : ''} onClick={() => setAba('metas')}>Metas do mês</button>
         <button className={aba === 'categorias' ? 'aba-ativa' : ''} onClick={() => setAba('categorias')}>Categorias</button>
         <button className={aba === 'graficos' ? 'aba-ativa' : ''} onClick={() => setAba('graficos')}>Gráficos</button>
+        <button className={aba === 'agenda' ? 'aba-ativa' : ''} onClick={() => setAba('agenda')}>Agenda</button>
       </div>
       {aba === 'lancamentos' && (
         <>
@@ -993,6 +1012,49 @@ function App() {
                 </li>
               );
             })}
+          </ul>
+        </div>
+      )}
+      {aba === 'agenda' && (
+        <div className="secao">
+          <h2>Agenda do mês</h2>
+          <form className="formulario" onSubmit={e => {
+            e.preventDefault();
+            if (!novoAgendamento.data || !novoAgendamento.descricao) return;
+            setAgendamentos([...agendamentos, novoAgendamento]);
+            setNovoAgendamento({ data: '', descricao: '' });
+          }}>
+            <input
+              type="date"
+              value={novoAgendamento.data}
+              onChange={e => setNovoAgendamento(a => ({ ...a, data: e.target.value }))}
+              min={mesSelecionado + '-01'}
+              max={mesSelecionado + '-31'}
+              required
+              style={{ maxWidth: 140 }}
+            />
+            <input
+              type="text"
+              placeholder="Descrição do compromisso"
+              value={novoAgendamento.descricao}
+              onChange={e => setNovoAgendamento(a => ({ ...a, descricao: e.target.value }))}
+              maxLength={60}
+              required
+              style={{ maxWidth: 220 }}
+            />
+            <button type="submit">Adicionar</button>
+          </form>
+          <ul style={{ width: '100%', padding: 0, margin: 0, listStyle: 'none' }}>
+            {agendamentos.filter(a => a.data.startsWith(mesSelecionado)).length === 0 && (
+              <li style={{ color: '#aaa', fontStyle: 'italic', padding: '0.7rem' }}>Nenhum agendamento para este mês.</li>
+            )}
+            {agendamentos.filter(a => a.data.startsWith(mesSelecionado)).sort((a, b) => a.data.localeCompare(b.data)).map((a, i) => (
+              <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#23272f', color: '#fff', borderRadius: 8, marginBottom: 6, padding: '0.6rem 1rem' }}>
+                <span style={{ minWidth: 90, fontWeight: 500 }}>{a.data.split('-').reverse().join('/')}</span>
+                <span style={{ flex: 1 }}>{a.descricao}</span>
+                <button style={{ background: '#d32f2f', color: '#fff', border: 'none', borderRadius: 5, padding: '0.2rem 0.7rem', cursor: 'pointer' }} onClick={() => setAgendamentos(ags => ags.filter((_, idx) => idx !== agendamentos.findIndex(ag => ag.data === a.data && ag.descricao === a.descricao)))}>Remover</button>
+              </li>
+            ))}
           </ul>
         </div>
       )}
