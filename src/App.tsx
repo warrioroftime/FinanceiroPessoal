@@ -213,16 +213,14 @@ function App() {
   const [dateAgenda, setDateAgenda] = useState<Date>(new Date());
 
   // Estado para cartões de crédito e contas bancárias
-  const [cartoes, setCartoes] = useState<{ id: number; nome: string }[]>([
-    { id: 1, nome: 'Nubank' },
-    { id: 2, nome: 'Santander' },
-  ]);
   const [contas, setContas] = useState<{ id: number; nome: string }[]>([
-    { id: 1, nome: 'Conta Corrente' },
-    { id: 2, nome: 'Poupança' },
+    { id: 1, nome: 'Nubank' },
+    { id: 2, nome: 'Itau' },
+    { id: 3, nome: 'Nubank Empresa' },
+    { id: 4, nome: 'Caixa' },
   ]);
-  const [gastosCartao, setGastosCartao] = useState<{ id: number; cartaoId: number; contaId: number; valor: number; descricao: string; data: string }[]>([]);
-  const [novoGasto, setNovoGasto] = useState({ cartaoId: 1, contaId: 1, valor: '', descricao: '', data: hoje });
+  const [gastosCartao, setGastosCartao] = useState<{ id: number; contaId: number; valor: number; descricao: string; data: string }[]>([]);
+  const [novoGasto, setNovoGasto] = useState({ contaId: 1, valor: '', descricao: '', data: hoje });
 
   function adicionarLancamento(e: React.FormEvent) {
     e.preventDefault();
@@ -386,8 +384,13 @@ function App() {
         metas,
         categorias,
         agendamentos: agendamentos.map(a => ({ ...a })),
-        gastosCartao: gastosCartao.map(g => ({ ...g })),
-        cartoes: cartoes.map(c => ({ ...c })),
+        gastosCartao: gastosCartao.map(g => ({
+          id: g.id,
+          contaId: g.contaId,
+          valor: g.valor,
+          descricao: g.descricao,
+          data: g.data
+        })),
         contas: contas.map(c => ({ ...c }))
       };
       const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
@@ -412,23 +415,32 @@ function App() {
         let body;
         let ags = [];
         let gastos = [];
-        let novosCartoes = [];
         let novasContas = [];
         if (Array.isArray(data)) {
-          body = JSON.stringify({ lancamentos: data, metas: [], categorias: [], agendamentos: [], gastosCartao: [], cartoes: [], contas: [] });
+          body = JSON.stringify({ lancamentos: data, metas: [], categorias: [], agendamentos: [], gastosCartao: [], contas: [] });
         } else {
           body = JSON.stringify({
             lancamentos: data.lancamentos || [],
             metas: data.metas || [],
             categorias: data.categorias || [],
             agendamentos: data.agendamentos || [],
-            gastosCartao: data.gastosCartao || [],
-            cartoes: data.cartoes || [],
+            gastosCartao: (data.gastosCartao || []).map((g: any) => ({
+              id: g.id,
+              contaId: g.contaId,
+              valor: g.valor,
+              descricao: g.descricao,
+              data: g.data
+            })),
             contas: data.contas || []
           });
           ags = data.agendamentos || [];
-          gastos = data.gastosCartao || [];
-          novosCartoes = data.cartoes || [];
+          gastos = (data.gastosCartao || []).map((g: any) => ({
+            id: g.id,
+            contaId: g.contaId,
+            valor: g.valor,
+            descricao: g.descricao,
+            data: g.data
+          }));
           novasContas = data.contas || [];
         }
         fetch('http://localhost:3001/importar', {
@@ -450,7 +462,6 @@ function App() {
                 setCategorias(cats);
                 setAgendamentos(ags); // Atualiza agendamentos do JSON importado
                 setGastosCartao(gastos);
-                if (novosCartoes.length > 0) setCartoes(novosCartoes);
                 if (novasContas.length > 0) setContas(novasContas);
                 alert('Importação concluída com sucesso!');
               });
@@ -1283,20 +1294,16 @@ function App() {
                     ...gastosCartao,
                     {
                       id: Date.now(),
-                      cartaoId: Number(novoGasto.cartaoId),
+                      // Removido cartaoId
                       contaId: Number(novoGasto.contaId),
                       valor: parseFloat(novoGasto.valor.replace(',', '.')),
                       descricao: novoGasto.descricao,
                       data: novoGasto.data
                     }
                   ]);
-                  setNovoGasto({ cartaoId: cartoes[0]?.id || 1, contaId: contas[0]?.id || 1, valor: '', descricao: '', data: hoje });
+                  setNovoGasto({ contaId: contas[0]?.id || 1, valor: '', descricao: '', data: hoje });
                 }}>
-                  <select value={novoGasto.cartaoId} onChange={e => setNovoGasto(g => ({ ...g, cartaoId: Number(e.target.value) }))}>
-                    {cartoes.map(c => (
-                      <option key={c.id} value={c.id}>{c.nome}</option>
-                    ))}
-                  </select>
+                  {/* Removido select de cartão */}
                   <select value={novoGasto.contaId} onChange={e => setNovoGasto(g => ({ ...g, contaId: Number(e.target.value) }))}>
                     {contas.map(c => (
                       <option key={c.id} value={c.id}>{c.nome}</option>
@@ -1327,7 +1334,7 @@ function App() {
                   <thead>
                     <tr>
                       <th>Data</th>
-                      <th>Cartão</th>
+                      {/* Removido Cartão */}
                       <th>Conta</th>
                       <th>Descrição</th>
                       <th>Valor</th>
@@ -1336,12 +1343,12 @@ function App() {
                   </thead>
                   <tbody>
                     {gastosCartao.length === 0 && (
-                      <tr><td colSpan={6} style={{textAlign:'center'}}>Nenhum gasto lançado</td></tr>
+                      <tr><td colSpan={5} style={{textAlign:'center'}}>Nenhum gasto lançado</td></tr>
                     )}
                     {gastosCartao.map(g => (
                       <tr key={g.id}>
                         <td>{g.data}</td>
-                        <td>{cartoes.find(c => c.id === g.cartaoId)?.nome || '-'}</td>
+                        {/* Removido Cartão */}
                         <td>{contas.find(c => c.id === g.contaId)?.nome || '-'}</td>
                         <td>{g.descricao}</td>
                         <td>R$ {g.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
