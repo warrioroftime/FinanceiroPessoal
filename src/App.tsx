@@ -1286,7 +1286,22 @@ function App() {
             )}
             {aba === 'cartoes' && (
               <div className="secao">
-                <div className="secao-titulo">Cartões de Crédito</div>
+                <div className="secao-titulo">Gastos de Cartão de Crédito</div>
+                {/* Seletor de mês para cartões */}
+                <div className="filtro-mes" style={{ marginBottom: 18 }}>
+                  <label>
+                    Mês:&nbsp;
+                    <input
+                      type="month"
+                      value={mesSelecionado}
+                      onChange={e => setMesSelecionado(e.target.value)}
+                    />
+                  </label>
+                </div>
+                {/* Total gasto no mês selecionado */}
+                <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 12, color: '#d32f2f' }}>
+                  Total gasto no mês: R$ {gastosCartao.filter(g => g.data.startsWith(mesSelecionado)).reduce((acc, g) => acc + Number(g.valor), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </div>
                 <form className="formulario" onSubmit={e => {
                   e.preventDefault();
                   if (!novoGasto.valor || !novoGasto.descricao || !novoGasto.data) return;
@@ -1294,7 +1309,6 @@ function App() {
                     ...gastosCartao,
                     {
                       id: Date.now(),
-                      // Removido cartaoId
                       contaId: Number(novoGasto.contaId),
                       valor: parseFloat(novoGasto.valor.replace(',', '.')),
                       descricao: novoGasto.descricao,
@@ -1303,7 +1317,6 @@ function App() {
                   ]);
                   setNovoGasto({ contaId: contas[0]?.id || 1, valor: '', descricao: '', data: hoje });
                 }}>
-                  {/* Removido select de cartão */}
                   <select value={novoGasto.contaId} onChange={e => setNovoGasto(g => ({ ...g, contaId: Number(e.target.value) }))}>
                     {contas.map(c => (
                       <option key={c.id} value={c.id}>{c.nome}</option>
@@ -1334,7 +1347,6 @@ function App() {
                   <thead>
                     <tr>
                       <th>Data</th>
-                      {/* Removido Cartão */}
                       <th>Conta</th>
                       <th>Descrição</th>
                       <th>Valor</th>
@@ -1342,13 +1354,12 @@ function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {gastosCartao.length === 0 && (
+                    {gastosCartao.filter(g => g.data.startsWith(mesSelecionado)).length === 0 && (
                       <tr><td colSpan={5} style={{textAlign:'center'}}>Nenhum gasto lançado</td></tr>
                     )}
-                    {gastosCartao.map(g => (
+                    {gastosCartao.filter(g => g.data.startsWith(mesSelecionado)).map(g => (
                       <tr key={g.id}>
                         <td>{g.data}</td>
-                        {/* Removido Cartão */}
                         <td>{contas.find(c => c.id === g.contaId)?.nome || '-'}</td>
                         <td>{g.descricao}</td>
                         <td>R$ {g.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
