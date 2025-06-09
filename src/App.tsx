@@ -87,7 +87,7 @@ function App() {
     const hoje = new Date();
     return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [aba, setAba] = useState<'lancamentos' | 'metas' | 'categorias' | 'graficos' | 'agenda'>('lancamentos');
+  const [aba, setAba] = useState<'lancamentos' | 'metas' | 'categorias' | 'graficos' | 'agenda' | 'cartoes'>('lancamentos');
   const [logado, setLogado] = useState(false);
   const [usuario, setUsuario] = useState('');
   const [senha, setSenha] = useState('');
@@ -211,6 +211,18 @@ function App() {
   // Estado para controlar a visualização e data central do calendário
   const [viewAgenda, setViewAgenda] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
   const [dateAgenda, setDateAgenda] = useState<Date>(new Date());
+
+  // Estado para cartões de crédito e contas bancárias
+  const [cartoes, setCartoes] = useState<{ id: number; nome: string }[]>([
+    { id: 1, nome: 'Nubank' },
+    { id: 2, nome: 'Santander' },
+  ]);
+  const [contas, setContas] = useState<{ id: number; nome: string }[]>([
+    { id: 1, nome: 'Conta Corrente' },
+    { id: 2, nome: 'Poupança' },
+  ]);
+  const [gastosCartao, setGastosCartao] = useState<{ id: number; cartaoId: number; contaId: number; valor: number; descricao: string; data: string }[]>([]);
+  const [novoGasto, setNovoGasto] = useState({ cartaoId: 1, contaId: 1, valor: '', descricao: '', data: hoje });
 
   function adicionarLancamento(e: React.FormEvent) {
     e.preventDefault();
@@ -362,7 +374,7 @@ function App() {
   }
 
   // Função para exportar lançamentos, metas, categorias e agendamentos (JSON)
-  // --- EXPORTAÇÃO E IMPORTAÇÃO DE AGENDAMENTOS NO JSON ---
+  // --- EXPORTAÇÃO E IMPORTAÇÃO DE DADOS ---
   function exportarLancamentos() {
     Promise.all([
       fetch('http://localhost:3001/lancamentos').then(res => res.json()),
@@ -373,7 +385,10 @@ function App() {
         lancamentos,
         metas,
         categorias,
-        agendamentos: agendamentos.map(a => ({ ...a }))
+        agendamentos: agendamentos.map(a => ({ ...a })),
+        gastosCartao: gastosCartao.map(g => ({ ...g })),
+        cartoes: cartoes.map(c => ({ ...c })),
+        contas: contas.map(c => ({ ...c }))
       };
       const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
@@ -396,16 +411,25 @@ function App() {
         const data = JSON.parse(event.target?.result as string);
         let body;
         let ags = [];
+        let gastos = [];
+        let novosCartoes = [];
+        let novasContas = [];
         if (Array.isArray(data)) {
-          body = JSON.stringify({ lancamentos: data, metas: [], categorias: [], agendamentos: [] });
+          body = JSON.stringify({ lancamentos: data, metas: [], categorias: [], agendamentos: [], gastosCartao: [], cartoes: [], contas: [] });
         } else {
           body = JSON.stringify({
             lancamentos: data.lancamentos || [],
             metas: data.metas || [],
             categorias: data.categorias || [],
-            agendamentos: data.agendamentos || []
+            agendamentos: data.agendamentos || [],
+            gastosCartao: data.gastosCartao || [],
+            cartoes: data.cartoes || [],
+            contas: data.contas || []
           });
           ags = data.agendamentos || [];
+          gastos = data.gastosCartao || [];
+          novosCartoes = data.cartoes || [];
+          novasContas = data.contas || [];
         }
         fetch('http://localhost:3001/importar', {
           method: 'POST',
@@ -416,8 +440,6 @@ function App() {
           .then(resp => {
             if (resp.error) alert('Erro ao importar: ' + resp.error);
             else {
-              // Atualiza os estados locais sem recarregar a página
-              // Buscar os dados atualizados do backend
               Promise.all([
                 fetch('http://localhost:3001/lancamentos').then(res => res.json()),
                 fetch('http://localhost:3001/metas').then(res => res.json()),
@@ -427,6 +449,9 @@ function App() {
                 setMetas(metas);
                 setCategorias(cats);
                 setAgendamentos(ags); // Atualiza agendamentos do JSON importado
+                setGastosCartao(gastos);
+                if (novosCartoes.length > 0) setCartoes(novosCartoes);
+                if (novasContas.length > 0) setContas(novasContas);
                 alert('Importação concluída com sucesso!');
               });
             }
@@ -708,6 +733,7 @@ function App() {
             <button className={aba === 'categorias' ? 'aba-ativa' : ''} onClick={() => setAba('categorias')}>Categorias</button>
             <button className={aba === 'graficos' ? 'aba-ativa' : ''} onClick={() => setAba('graficos')}>Gráficos</button>
             <button className={aba === 'agenda' ? 'aba-ativa' : ''} onClick={() => setAba('agenda')}>Agenda</button>
+            <button className={aba === 'cartoes' ? 'aba-ativa' : ''} onClick={() => setAba('cartoes')}>Cartões</button>
           </nav>
           <div className="main-content">
             {aba === 'lancamentos' && (
@@ -1245,6 +1271,90 @@ function App() {
                     resizable={false}
                   />
                 </div>
+              </div>
+            )}
+            {aba === 'cartoes' && (
+              <div className="secao">
+                <div className="secao-titulo">Cartões de Crédito</div>
+                <form className="formulario" onSubmit={e => {
+                  e.preventDefault();
+                  if (!novoGasto.valor || !novoGasto.descricao || !novoGasto.data) return;
+                  setGastosCartao(gastosCartao => [
+                    ...gastosCartao,
+                    {
+                      id: Date.now(),
+                      cartaoId: Number(novoGasto.cartaoId),
+                      contaId: Number(novoGasto.contaId),
+                      valor: parseFloat(novoGasto.valor.replace(',', '.')),
+                      descricao: novoGasto.descricao,
+                      data: novoGasto.data
+                    }
+                  ]);
+                  setNovoGasto({ cartaoId: cartoes[0]?.id || 1, contaId: contas[0]?.id || 1, valor: '', descricao: '', data: hoje });
+                }}>
+                  <select value={novoGasto.cartaoId} onChange={e => setNovoGasto(g => ({ ...g, cartaoId: Number(e.target.value) }))}>
+                    {cartoes.map(c => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </select>
+                  <select value={novoGasto.contaId} onChange={e => setNovoGasto(g => ({ ...g, contaId: Number(e.target.value) }))}>
+                    {contas.map(c => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    placeholder="Valor"
+                    value={novoGasto.valor}
+                    onChange={e => setNovoGasto(g => ({ ...g, valor: e.target.value }))}
+                    step="0.01"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Descrição"
+                    value={novoGasto.descricao}
+                    onChange={e => setNovoGasto(g => ({ ...g, descricao: e.target.value }))}
+                  />
+                  <input
+                    type="date"
+                    value={novoGasto.data}
+                    onChange={e => setNovoGasto(g => ({ ...g, data: e.target.value }))}
+                  />
+                  <button type="submit">Lançar gasto</button>
+                </form>
+                <h3 style={{marginTop: 18}}>Gastos lançados</h3>
+                <table style={{width: '100%', background: '#23272f', color: '#fff', borderRadius: 8, marginTop: 8}}>
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Cartão</th>
+                      <th>Conta</th>
+                      <th>Descrição</th>
+                      <th>Valor</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gastosCartao.length === 0 && (
+                      <tr><td colSpan={6} style={{textAlign:'center'}}>Nenhum gasto lançado</td></tr>
+                    )}
+                    {gastosCartao.map(g => (
+                      <tr key={g.id}>
+                        <td>{g.data}</td>
+                        <td>{cartoes.find(c => c.id === g.cartaoId)?.nome || '-'}</td>
+                        <td>{contas.find(c => c.id === g.contaId)?.nome || '-'}</td>
+                        <td>{g.descricao}</td>
+                        <td>R$ {g.valor.toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
+                        <td>
+                          <button style={{background:'#d32f2f',color:'#fff',border:'none',borderRadius:4,padding:'2px 10px',cursor:'pointer'}}
+                            onClick={() => setGastosCartao(gastosCartao.filter(item => item.id !== g.id))}>
+                            Excluir
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
